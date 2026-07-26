@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Administrativo - Latrode</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="stylesheet" href="/admin/css/admin.css">
+    <link rel="icon" type="image/svg+xml" href="/assets/latrode-icon-white.svg">
+</head>
+<body>
+    <div class="admin-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1>🛍️ Latrode Admin</h1>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="#dashboard" class="nav-item active" data-section="dashboard">
+                    <span class="icon">📊</span>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#orders" class="nav-item" data-section="orders">
+                    <span class="icon">📦</span>
+                    <span>Órdenes</span>
+                </a>
+                <a href="#products" class="nav-item" data-section="products">
+                    <span class="icon">🏷️</span>
+                    <span>Productos</span>
+                </a>
+                <a href="#payments" class="nav-item" data-section="payments">
+                    <span class="icon">💳</span>
+                    <span>Pagos</span>
+                </a>
+                <a href="#users" class="nav-item" data-section="users">
+                    <span class="icon">👥</span>
+                    <span>Usuarios</span>
+                </a>
+                <a href="#settings" class="nav-item" data-section="settings">
+                    <span class="icon">⚙️</span>
+                    <span>Configuración</span>
+                </a>
+                <a href="#logs" class="nav-item" data-section="logs">
+                    <span class="icon">📋</span>
+                    <span>Logs</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <button id="logoutBtn" class="btn-logout">
+                    <span class="icon">🚪</span>
+                    <span>Cerrar Sesión</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-bar">
+                <h2 id="pageTitle">Dashboard</h2>
+                <div class="user-info">
+                    <span id="adminUsername">Admin</span>
+                </div>
+            </header>
+
+            <div class="content-area">
+                <!-- Dashboard Section -->
+                <section id="section-dashboard" class="content-section active">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon">💰</div>
+                            <div class="stat-info">
+                                <h3>Ingresos Totales</h3>
+                                <p class="stat-value" id="totalRevenue">$0</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">📦</div>
+                            <div class="stat-info">
+                                <h3>Órdenes Totales</h3>
+                                <p class="stat-value" id="totalOrders">0</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">⏳</div>
+                            <div class="stat-info">
+                                <h3>Órdenes Pendientes</h3>
+                                <p class="stat-value" id="pendingOrders">0</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">👥</div>
+                            <div class="stat-info">
+                                <h3>Clientes</h3>
+                                <p class="stat-value" id="totalCustomers">0</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-grid">
+                        <div class="dashboard-card">
+                            <h3>Órdenes Recientes</h3>
+                            <div id="recentOrders" class="table-container">
+                                <p class="loading">Cargando...</p>
+                            </div>
+                        </div>
+
+                        <div class="dashboard-card">
+                            <h3>Productos Más Vendidos</h3>
+                            <div id="topProducts" class="products-list">
+                                <p class="loading">Cargando...</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Orders Section -->
+                <section id="section-orders" class="content-section">
+                    <div class="section-header">
+                        <h3>Gestión de Órdenes</h3>
+                        <div class="filters">
+                            <select id="orderStatusFilter">
+                                <option value="">Todos los estados</option>
+                                <option value="pending">Pendiente</option>
+                                <option value="processing">Procesando</option>
+                                <option value="completed">Completado</option>
+                                <option value="cancelled">Cancelado</option>
+                            </select>
+                            <select id="paymentStatusFilter">
+                                <option value="">Todos los pagos</option>
+                                <option value="pending">Pago Pendiente</option>
+                                <option value="paid">Pagado</option>
+                                <option value="failed">Fallido</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="ordersTable" class="table-container">
+                        <p class="loading">Cargando órdenes...</p>
+                    </div>
+                </section>
+
+                <!-- Products Section -->
+                <section id="section-products" class="content-section">
+                    <div class="section-header">
+                        <h3>Gestión de Productos</h3>
+                        <button id="addProductBtn" class="btn-primary">+ Agregar Producto</button>
+                    </div>
+                    <div id="productsGrid" class="products-grid">
+                        <p class="loading">Cargando productos...</p>
+                    </div>
+                </section>
+
+                <!-- Payments Section -->
+                <section id="section-payments" class="content-section">
+                    <div class="section-header">
+                        <h3>Métodos de Pago</h3>
+                    </div>
+                    <div id="paymentMethods" class="payment-methods-grid">
+                        <p class="loading">Cargando métodos de pago...</p>
+                    </div>
+                </section>
+
+                <!-- Users Section -->
+                <section id="section-users" class="content-section">
+                    <div class="section-header">
+                        <h3>Usuarios Registrados</h3>
+                    </div>
+                    <div class="users-filter-bar">
+                        <input type="text" id="usersSearchInput" placeholder="Buscar por nombre o email..." class="users-search-input">
+                        <select id="usersRoleFilter" class="users-role-select">
+                            <option value="">Todos los roles</option>
+                            <option value="admin">Admin</option>
+                            <option value="customer">Cliente</option>
+                        </select>
+                        <button class="btn-primary btn-sm" onclick="applyUsersFilter()">Filtrar</button>
+                    </div>
+                    <div id="usersTable" class="table-container">
+                        <p class="loading">Cargando usuarios...</p>
+                    </div>
+                </section>
+
+                <!-- Settings Section -->
+                <section id="section-settings" class="content-section">
+                    <div class="section-header">
+                        <h3>Configuración del Sitio</h3>
+                    </div>
+                    <div id="settingsForm" class="settings-form">
+                        <p class="loading">Cargando configuración...</p>
+                    </div>
+                </section>
+
+                <!-- Logs Section -->
+                <section id="section-logs" class="content-section">
+                    <div class="section-header">
+                        <h3>Registro de Actividad</h3>
+                    </div>
+                    <div id="logsTable" class="table-container">
+                        <p class="loading">Cargando logs...</p>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal for Order Details -->
+    <div id="orderModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Detalles de la Orden</h2>
+            <div id="orderDetails"></div>
+        </div>
+    </div>
+
+    <!-- Modal for Product Form -->
+    <div id="productModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 id="productModalTitle">Agregar Producto</h2>
+            <form id="productForm">
+                <div class="form-group">
+                    <label>Nombre</label>
+                    <input type="text" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label>Descripción</label>
+                    <textarea name="description" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Precio</label>
+                    <input type="number" name="price" step="0.01" required>
+                </div>
+                <!-- stock auto-calculado de colores × tallas -->
+                <div class="form-group">
+                    <label>Categoría</label>
+                    <input type="text" name="category" required>
+                </div>
+                <div class="form-group">
+                    <label>Material</label>
+                    <input type="text" name="material" placeholder="Ej: Algodón orgánico">
+                </div>
+                <div class="form-group">
+                    <label>Tallas disponibles (separadas por coma)</label>
+                    <input type="text" name="sizes" id="product-sizes-input" placeholder="Ej: S, M, L, XL" oninput="onGlobalSizesChange()">
+                </div>
+                <div class="form-group">
+                    <label>Imagen del producto</label>
+                    <div class="image-upload-area" id="image-upload-area">
+                        <img id="image-preview" class="image-preview" style="display:none" alt="Vista previa">
+                        <div class="image-upload-placeholder" id="image-upload-placeholder">
+                            <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                            <span>Click para subir imagen</span>
+                        </div>
+                        <input type="file" id="image-file-input" accept="image/jpeg,image/png,image/webp,image/gif" style="display:none">
+                    </div>
+                    <input type="hidden" name="image_url" id="image_url_hidden">
+                    <div class="image-upload-info">JPG, PNG, WebP o GIF - Máx 5MB</div>
+                </div>
+                <div class="form-group">
+                    <label>Colores</label>
+                    <div id="color-list" class="color-list"></div>
+                    <div class="color-add-row">
+                        <input type="text" id="color-name-input" placeholder="Nombre (ej: Rojo)" class="color-input" style="flex:1">
+                        <input type="color" id="color-hex-input" value="#000000" class="color-input color-hex" style="width:40px">
+                        <button type="button" class="btn-secondary btn-sm" onclick="addColor()">+</button>
+                    </div>
+                    <div id="color-size-stock-area" class="color-size-stock-area" style="display:none; margin-top:8px">
+                        <label class="size-stock-area-label">Stock por talla:</label>
+                        <div id="color-size-stock-inputs" class="color-size-stock-inputs"></div>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Guardar</button>
+                    <button type="button" class="btn-secondary" onclick="closeProductModal()">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Login Overlay -->
+    <div id="loginOverlay" class="admin-login-overlay">
+        <div class="admin-login-modal">
+            <div id="adminLoginView">
+                <h2>Iniciar Sesión</h2>
+                <p class="login-subtitle">Panel Administrativo Latrode</p>
+                <form id="adminLoginForm">
+                    <div class="form-group">
+                        <label for="loginEmail">Correo Electrónico</label>
+                        <input type="email" id="loginEmail" placeholder="admin@latrode.com" required autocomplete="email">
+                    </div>
+                    <div class="form-group">
+                        <label for="loginPassword">Contraseña</label>
+                        <input type="password" id="loginPassword" placeholder="••••••••" required autocomplete="current-password">
+                    </div>
+                    <p id="loginError" class="login-error" style="display:none"></p>
+                    <button type="submit" class="btn-primary login-btn">Ingresar</button>
+                    <a href="#" id="adminForgotLink" class="forgot-link" style="display:block;text-align:center;margin-top:12px;color:var(--muted);font-size:13px">¿Olvidaste tu contraseña?</a>
+                </form>
+            </div>
+            <div id="adminResetView" style="display:none">
+                <h2>Recuperar Contraseña</h2>
+                <p class="login-subtitle">Te enviaremos un código al correo del administrador</p>
+                <div id="adminResetBody">
+                    <div id="adminResetStep1">
+                        <button class="btn-primary login-btn" id="adminSendCodeBtn">Enviar Código</button>
+                    </div>
+                    <div id="adminResetStep2" style="display:none">
+                        <div class="form-group">
+                            <label for="resetCode">Código de recuperación</label>
+                            <input type="text" id="resetCode" placeholder="000000">
+                        </div>
+                        <button class="btn-primary login-btn" id="adminVerifyCodeBtn">Verificar Código</button>
+                    </div>
+                    <div id="adminResetStep3" style="display:none">
+                        <div class="form-group">
+                            <label for="resetNewPassword">Nueva Contraseña</label>
+                            <input type="password" id="resetNewPassword" placeholder="••••••••">
+                        </div>
+                        <button class="btn-primary login-btn" id="adminChangePwBtn">Cambiar Contraseña</button>
+                    </div>
+                    <p id="resetError" class="login-error" style="display:none"></p>
+                    <a href="#" id="adminBackToLogin" style="display:block;text-align:center;margin-top:12px;color:var(--muted);font-size:13px">← Volver a inicio de sesión</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/admin/js/admin.js?v=3"></script>
+</body>
+</html>

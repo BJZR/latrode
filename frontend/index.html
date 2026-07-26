@@ -1,0 +1,805 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style id="splash-scroll-lock">html,body{overflow:hidden!important;height:100%!important;margin:0}</style>
+    <link rel="icon" type="image/svg+xml" href="assets/latrode-icon-white.svg" />
+    <link rel="stylesheet" href="css/styles.css?v=12" />
+    <title>latrode</title>
+  </head>
+
+  <body>
+    <div id="splash-screen">
+      <div class="splash-icon">
+        <svg viewBox="0 0 256 256" width="96" height="96" fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"><line x1="32" y1="64" x2="128" y2="224"/><line x1="224" y1="64" x2="128" y2="224"/><line x1="32" y1="64" x2="64" y2="64"/><line x1="192" y1="64" x2="224" y2="64"/><path d="M64 48 L128 160 L192 48 Z"/></svg>
+      </div>
+    </div>
+    <div class="feed" id="product-feed"></div>
+
+    <nav class="floating-bar">
+      <div class="nav-buttons">
+        <button aria-label="Carrito de compras" id="main-action-btn">
+          <svg class="icon-cart" viewBox="0 0 24 24"><use href="assets/icons/cart.svg#icon"/></svg>
+          <svg class="icon-back" viewBox="0 0 24 24" style="display: none"><use href="assets/icons/back-arrow.svg#icon"/></svg>
+        </button>
+        <button aria-label="Buscar" id="search-trigger-btn">
+          <svg class="icon-search" viewBox="0 0 24 24"><use href="assets/icons/search.svg#icon"/></svg>
+          <svg class="icon-add-cart" viewBox="0 0 24 24" style="display: none"><use href="assets/icons/plus.svg#icon"/></svg>
+          <svg class="icon-home" viewBox="0 0 24 24" style="display: none"><use href="assets/icons/home.svg#icon"/></svg>
+        </button>
+        <button aria-label="Perfil" id="profile-trigger-btn">
+          <svg class="icon-profile" viewBox="0 0 24 24"><use href="assets/icons/profile.svg#icon"/></svg>
+          <svg class="icon-favorite" viewBox="0 0 24 24" style="display: none">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+          </svg>
+        </button>
+        <button aria-label="Menú" id="menu-trigger-btn">
+          <svg class="icon-menu" viewBox="0 0 24 24"><use href="assets/icons/menu.svg#icon"/></svg>
+          <svg class="icon-check" viewBox="0 0 24 24" style="display: none"><use href="assets/icons/check.svg#icon"/></svg>
+        </button>
+      </div>
+
+      <form autocomplete="off" style="display:none" class="search-container">
+        <input
+          type="search"
+          class="search-input"
+          placeholder="Buscar..."
+          aria-label="Buscar productos"
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="off"
+          spellcheck="false"
+          inputmode="search"
+        />
+        <div class="search-actions">
+          <button
+            type="button"
+            class="search-clear-btn"
+            aria-label="Borrar búsqueda"
+            style="display: none"
+          >
+            <svg viewBox="0 0 24 24"><use href="assets/icons/close.svg#icon"/></svg>
+          </button>
+          <button type="button" id="search-filter-btn" aria-label="Filtros">
+            <svg viewBox="0 0 24 24"><use href="assets/icons/filter.svg#icon"/></svg>
+          </button>
+          <button type="button" class="search-confirm-btn" aria-label="Confirmar búsqueda">
+            <svg viewBox="0 0 24 24"><use href="assets/icons/search.svg#icon"/></svg>
+          </button>
+        </div>
+      </form>
+    </nav>
+
+    <div class="search-overlay" id="search-overlay"></div>
+
+    <div class="menu-overlay" id="menu-overlay">
+      <div class="menu-panel">
+        <div class="menu-header">
+          <h2>Menú</h2>
+          <button class="modal-close-btn close-panel-btn" aria-label="Cerrar">
+              <svg viewBox="0 0 24 24" width="24" height="24"><use href="assets/icons/close.svg#icon"/></svg>
+            </button>
+        </div>
+        <div class="menu-content">
+          <button class="menu-item" id="theme-option">
+            <svg viewBox="0 0 24 24" class="menu-icon"><use href="assets/icons/sun.svg#icon"/></svg>
+            <span>Tema</span>
+          </button>
+          <button class="menu-item" data-action="fullscreen">
+            <svg viewBox="0 0 24 24" class="menu-icon"><use href="assets/icons/fullscreen.svg#icon"/></svg>
+            <span>Pantalla Completa</span>
+          </button>
+          <button class="menu-item" data-action="help">
+            <svg viewBox="0 0 24 24" class="menu-icon"><use href="assets/icons/help.svg#icon"/></svg>
+            <span>Ayuda</span>
+          </button>
+          <button class="menu-item" id="logout-option" style="display: none">
+            <svg viewBox="0 0 24 24" class="menu-icon"><use href="assets/icons/logout.svg#icon"/></svg>
+            <span>Cerrar Sesión</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="menu-overlay" id="help-overlay">
+      <div class="menu-panel">
+        <div class="menu-header">
+          <button class="back-btn" id="back-from-help">
+            <svg viewBox="0 0 24 24"><use href="assets/icons/back-arrow.svg#icon"/></svg>
+          </button>
+          <h2>Ayuda</h2>
+          <button class="modal-close-btn close-panel-btn" aria-label="Cerrar">
+              <svg viewBox="0 0 24 24" width="24" height="24"><use href="assets/icons/close.svg#icon"/></svg>
+            </button>
+        </div>
+        <div class="menu-content">
+          <div class="contact-item">
+            <svg viewBox="0 0 24 24" class="menu-icon"><use href="assets/icons/phone.svg#icon"/></svg>
+            <div class="contact-info">
+              <span class="contact-label">Teléfono</span>
+              <span class="contact-value" id="help-phone">302 283 3007</span>
+            </div>
+          </div>
+          <div class="contact-item">
+            <svg viewBox="0 0 24 24" class="menu-icon"><use href="assets/icons/mail.svg#icon"/></svg>
+            <div class="contact-info">
+              <span class="contact-label">Correo</span>
+              <span class="contact-value" id="help-email">latrode.co@gmail.com</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="menu-overlay" id="theme-overlay">
+      <div class="menu-panel">
+        <div class="menu-header">
+          <button class="back-btn" id="back-from-theme">
+            <svg viewBox="0 0 24 24"><use href="assets/icons/back-arrow.svg#icon"/></svg>
+          </button>
+          <h2>Tema</h2>
+          <button class="modal-close-btn close-panel-btn" aria-label="Cerrar">
+              <svg viewBox="0 0 24 24" width="24" height="24"><use href="assets/icons/close.svg#icon"/></svg>
+            </button>
+        </div>
+        <div class="menu-content">
+          <button class="menu-item theme-option" data-theme="light">
+            <svg viewBox="0 0 24 24" class="menu-icon"><use href="assets/icons/sun.svg#icon"/></svg>
+            <span>Claro</span>
+            <svg class="check-icon" viewBox="0 0 24 24" style="display: none"><use href="assets/icons/check.svg#icon"/></svg>
+          </button>
+          <button class="menu-item theme-option" data-theme="dark">
+            <svg viewBox="0 0 24 24" class="menu-icon"><use href="assets/icons/moon.svg#icon"/></svg>
+            <span>Oscuro</span>
+            <svg class="check-icon" viewBox="0 0 24 24" style="display: none"><use href="assets/icons/check.svg#icon"/></svg>
+          </button>
+          <button class="menu-item theme-option" data-theme="system">
+            <svg viewBox="0 0 24 24" class="menu-icon"><use href="assets/icons/monitor.svg#icon"/></svg>
+            <span>Sistema</span>
+            <svg class="check-icon" viewBox="0 0 24 24" style="display: none"><use href="assets/icons/check.svg#icon"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="menu-overlay" id="cart-overlay">
+      <div class="menu-panel">
+        <div class="menu-header">
+          <h2>Carrito</h2>
+          <button class="modal-close-btn close-panel-btn" aria-label="Cerrar">
+              <svg viewBox="0 0 24 24" width="24" height="24"><use href="assets/icons/close.svg#icon"/></svg>
+            </button>
+        </div>
+        <div class="menu-content">
+          <div class="cart-items" id="cart-items">
+            <div class="cart-empty">
+              <svg viewBox="0 0 24 24"><use href="assets/icons/cart.svg#icon"/></svg>
+              <h3>Tu carrito está vacío</h3>
+              <p>Agrega productos para comenzar tu compra</p>
+            </div>
+          </div>
+          <div class="cart-summary" id="cart-summary" style="display: none">
+            <div class="cart-summary-row">
+              <span>Subtotal</span>
+              <span class="cart-subtotal">$0</span>
+            </div>
+            <div class="cart-summary-row">
+              <span>Envío</span>
+              <span>Gratis</span>
+            </div>
+            <div class="cart-summary-row cart-total">
+              <span>Total</span>
+              <span class="cart-total-amount">$0</span>
+            </div>
+            <button class="checkout-btn">Proceder al Pago</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="menu-overlay" id="profile-overlay">
+      <div class="menu-panel" id="profile-panel">
+        <div class="profile-options" id="profile-options">
+          <div class="menu-header">
+            <h2>Mi Cuenta</h2>
+            <button class="modal-close-btn close-panel-btn" aria-label="Cerrar">
+              <svg viewBox="0 0 24 24" width="24" height="24"><use href="assets/icons/close.svg#icon"/></svg>
+            </button>
+          </div>
+          <div class="menu-content">
+            <button class="menu-item" id="login-option">
+            <svg viewBox="0 0 24 24" class="menu-icon"><use href="assets/icons/login.svg#icon"/></svg>
+            <span>Iniciar Sesión</span>
+            </button>
+            <button class="menu-item" id="register-option">
+            <svg viewBox="0 0 24 24" class="menu-icon"><use href="assets/icons/user-plus.svg#icon"/></svg>
+            <span>Registrarte</span>
+            </button>
+          </div>
+        </div>
+
+        <div id="login-form" style="display: none">
+          <div class="menu-header">
+            <button class="back-btn" id="back-from-login">
+            <svg viewBox="0 0 24 24"><use href="assets/icons/back-arrow.svg#icon"/></svg>
+          </button>
+          <h2>Iniciar Sesión</h2>
+            <button class="modal-close-btn close-panel-btn" aria-label="Cerrar">
+              <svg viewBox="0 0 24 24" width="24" height="24"><use href="assets/icons/close.svg#icon"/></svg>
+            </button>
+          </div>
+          <div class="menu-content">
+            <form class="form-container" id="login-form-el">
+              <a href="/api/v1/auth/google/login" class="google-btn">
+                <svg viewBox="0 0 48 48" class="google-icon"><use href="assets/icons/google.svg#icon"/></svg>
+                Continuar con Google
+              </a>
+              <div class="form-group">
+                <label for="login-email">Correo Electrónico</label>
+                <input type="email" id="login-email" placeholder="tu@email.com" required />
+              </div>
+              <div class="form-group">
+                <label for="login-password">Contraseña</label>
+                <div class="password-wrapper">
+                  <input type="password" id="login-password" placeholder="••••••••" required />
+                  <button type="button" class="toggle-password" aria-label="Mostrar contraseña">
+                    <svg class="eye-open" viewBox="0 0 24 24" width="20" height="20"><use href="assets/icons/eye-open.svg#icon"/></svg>
+                    <svg class="eye-closed" viewBox="0 0 24 24" width="20" height="20" style="display:none"><use href="assets/icons/eye-closed.svg#icon"/></svg>
+                  </button>
+                </div>
+              </div>
+              <button type="submit" class="submit-btn">Iniciar Sesión</button>
+              <a href="#" id="forgot-password-link" class="forgot-link">¿Olvidaste tu contraseña?</a>
+            </form>
+          </div>
+        </div>
+
+        <div id="password-reset-form" style="display: none">
+          <div class="menu-header">
+            <button class="back-btn" id="back-from-reset">
+              <svg viewBox="0 0 24 24"><use href="assets/icons/back-arrow.svg#icon"/></svg>
+            </button>
+            <h2>Recuperar Contraseña</h2>
+            <button class="modal-close-btn close-panel-btn" aria-label="Cerrar">
+              <svg viewBox="0 0 24 24" width="24" height="24"><use href="assets/icons/close.svg#icon"/></svg>
+            </button>
+          </div>
+          <div class="menu-content">
+            <div id="reset-step-1">
+              <p class="reset-info">Ingresa tu correo y te enviaremos un código de recuperación.</p>
+              <form class="form-container" id="reset-email-form">
+                <div class="form-group">
+                  <label for="reset-email">Correo Electrónico</label>
+                  <input type="email" id="reset-email" placeholder="tu@email.com" required />
+                </div>
+                <button type="submit" class="submit-btn">Enviar Código</button>
+              </form>
+            </div>
+            <div id="reset-step-2" style="display: none">
+              <p class="reset-info">Ingresa el código que enviamos a tu correo.</p>
+              <form class="form-container" id="reset-code-form">
+                <div class="form-group">
+                  <label for="reset-code">Código de verificación</label>
+                  <input type="text" id="reset-code" placeholder="000000" required />
+                </div>
+                <button type="submit" class="submit-btn">Verificar</button>
+              </form>
+              <p class="form-footer">
+                <a href="#" id="resend-code-link">Volver a enviar código</a>
+              </p>
+            </div>
+            <div id="reset-step-3" style="display: none">
+              <p class="reset-info">Escribe tu nueva contraseña.</p>
+              <form class="form-container" id="reset-password-form">
+                <div class="form-group">
+                  <label for="reset-new-password">Nueva Contraseña</label>
+                  <div class="password-wrapper">
+                    <input type="password" id="reset-new-password" placeholder="••••••••" required />
+                    <button type="button" class="toggle-password" aria-label="Mostrar contraseña">
+                      <svg class="eye-open" viewBox="0 0 24 24" width="20" height="20"><use href="assets/icons/eye-open.svg#icon"/></svg>
+                      <svg class="eye-closed" viewBox="0 0 24 24" width="20" height="20" style="display:none"><use href="assets/icons/eye-closed.svg#icon"/></svg>
+                    </button>
+                  </div>
+                </div>
+                <button type="submit" class="submit-btn">Cambiar Contraseña</button>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <div id="register-form" style="display: none">
+          <div class="menu-header">
+            <button class="back-btn" id="back-from-register">
+            <svg viewBox="0 0 24 24"><use href="assets/icons/back-arrow.svg#icon"/></svg>
+          </button>
+          <h2>Registrarte</h2>
+            <button class="modal-close-btn close-panel-btn" aria-label="Cerrar">
+              <svg viewBox="0 0 24 24" width="24" height="24"><use href="assets/icons/close.svg#icon"/></svg>
+            </button>
+          </div>
+          <div class="menu-content">
+            <form class="form-container" id="register-form-el">
+              <a href="/api/v1/auth/google/login" class="google-btn">
+                <svg viewBox="0 0 48 48" class="google-icon"><use href="assets/icons/google.svg#icon"/></svg>
+                Continuar con Google
+              </a>
+              <div class="form-group">
+                <label for="register-username">Nombre de Usuario</label>
+                <input type="text" id="register-username" placeholder="usuario123" required />
+              </div>
+              <div class="form-group">
+                <label for="register-email">Correo Electrónico</label>
+                <input type="email" id="register-email" placeholder="tu@email.com" required />
+              </div>
+              <div class="form-group">
+                <label for="register-password">Contraseña</label>
+                <div class="password-wrapper">
+                  <input type="password" id="register-password" placeholder="••••••••" required />
+                  <button type="button" class="toggle-password" aria-label="Mostrar contraseña">
+                    <svg class="eye-open" viewBox="0 0 24 24" width="20" height="20"><use href="assets/icons/eye-open.svg#icon"/></svg>
+                    <svg class="eye-closed" viewBox="0 0 24 24" width="20" height="20" style="display:none"><use href="assets/icons/eye-closed.svg#icon"/></svg>
+                  </button>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="register-password-confirm">Confirmar Contraseña</label>
+                <div class="password-wrapper">
+                  <input type="password" id="register-password-confirm" placeholder="••••••••" required />
+                  <button type="button" class="toggle-password" aria-label="Mostrar contraseña">
+                    <svg class="eye-open" viewBox="0 0 24 24" width="20" height="20"><use href="assets/icons/eye-open.svg#icon"/></svg>
+                    <svg class="eye-closed" viewBox="0 0 24 24" width="20" height="20" style="display:none"><use href="assets/icons/eye-closed.svg#icon"/></svg>
+                  </button>
+                </div>
+              </div>
+              <button type="submit" class="submit-btn">Crear Cuenta</button>
+            </form>
+          </div>
+        </div>
+
+        <div
+          class="profile-logged-in"
+          id="profile-logged-in"
+          style="display: none"
+        >
+          <div class="menu-header">
+            <h2>Mi Cuenta</h2>
+            <button class="modal-close-btn close-panel-btn" aria-label="Cerrar">
+              <svg viewBox="0 0 24 24" width="24" height="24"><use href="assets/icons/close.svg#icon"/></svg>
+            </button>
+          </div>
+          <div class="menu-content">
+            <div class="user-info">
+              <div class="user-avatar">
+                <svg viewBox="0 0 24 24"><use href="assets/icons/profile.svg#icon"/></svg>
+              </div>
+              <div class="user-details">
+                <h3 id="user-name">Usuario</h3>
+                <p id="user-email">email@ejemplo.com</p>
+              </div>
+            </div>
+            <button class="menu-item" id="edit-profile-btn">
+            <svg viewBox="0 0 24 24" class="menu-icon"><use href="assets/icons/profile.svg#icon"/></svg>
+            <span>Perfil</span>
+            </button>
+            <button class="menu-item" id="profile-orders-btn">
+            <svg viewBox="0 0 24 24" class="menu-icon"><use href="assets/icons/list.svg#icon"/></svg>
+            <span>Mis Pedidos</span>
+            </button>
+            <button class="menu-item" id="profile-favorites-btn">
+            <svg viewBox="0 0 24 24" class="menu-icon"><use href="assets/icons/favorite.svg#icon"/></svg>
+            <span>Favoritos</span>
+            </button>
+            <button class="menu-item" id="set-password-btn" style="display:none">
+            <svg viewBox="0 0 24 24" class="menu-icon"><use href="assets/icons/pencil.svg#icon"/></svg>
+            <span>Establecer Contraseña</span>
+            </button>
+            <button class="menu-item" id="logout-btn">
+            <svg viewBox="0 0 24 24" class="menu-icon"><use href="assets/icons/logout.svg#icon"/></svg>
+            <span>Cerrar Sesión</span>
+          </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Set Password Overlay -->
+    <div class="menu-overlay" id="set-password-overlay">
+      <div class="menu-panel">
+        <div class="menu-header">
+          <button class="back-btn" onclick="app.backFromPanel('set-password-overlay')">
+            <svg viewBox="0 0 24 24"><use href="assets/icons/back-arrow.svg#icon"/></svg>
+          </button>
+          <h2>Establecer Contraseña</h2>
+          <button class="modal-close-btn close-panel-btn" aria-label="Cerrar">
+              <svg viewBox="0 0 24 24" width="24" height="24"><use href="assets/icons/close.svg#icon"/></svg>
+            </button>
+        </div>
+        <div class="menu-content">
+          <form class="form-container" id="set-password-form">
+            <p class="reset-info">Ingresa tu nueva contraseña para poder iniciar sesión también con email y contraseña.</p>
+            <div class="form-group">
+              <label for="set-new-password">Nueva Contraseña</label>
+              <div class="password-wrapper">
+                <input type="password" id="set-new-password" placeholder="••••••••" required />
+                <button type="button" class="toggle-password" aria-label="Mostrar contraseña">
+                  <svg class="eye-open" viewBox="0 0 24 24" width="20" height="20"><use href="assets/icons/eye-open.svg#icon"/></svg>
+                  <svg class="eye-closed" viewBox="0 0 24 24" width="20" height="20" style="display:none"><use href="assets/icons/eye-closed.svg#icon"/></svg>
+                </button>
+              </div>
+            </div>
+            <button type="submit" class="submit-btn">Guardar Contraseña</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Profile Edit Modal -->
+    <div class="menu-overlay" id="profile-edit-overlay">
+      <div class="menu-panel">
+        <div class="menu-header">
+          <button class="back-btn" onclick="app.backFromPanel('profile-edit-overlay')">
+            <svg viewBox="0 0 24 24"><use href="assets/icons/back-arrow.svg#icon"/></svg>
+          </button>
+          <h2>Mi Perfil</h2>
+          <button class="modal-close-btn close-panel-btn" aria-label="Cerrar">
+              <svg viewBox="0 0 24 24" width="24" height="24"><use href="assets/icons/close.svg#icon"/></svg>
+            </button>
+        </div>
+        <div class="menu-content">
+          <form id="profile-form" class="form-container">
+            <div class="form-group">
+              <label for="profile-phone">Teléfono</label>
+              <input
+                type="tel"
+                id="profile-phone"
+                name="phone"
+                placeholder="Ej: 3001234567"
+              />
+            </div>
+            <div class="form-group">
+              <label for="profile-address">Dirección</label>
+              <input
+                type="text"
+                id="profile-address"
+                name="address"
+                placeholder="Calle 123 #45-67"
+              />
+            </div>
+            <div class="form-group">
+              <label for="profile-city">Ciudad</label>
+              <input
+                type="text"
+                id="profile-city"
+                name="city"
+                placeholder="Bogotá"
+              />
+            </div>
+            <div class="form-group">
+              <label for="profile-postal">Código Postal</label>
+              <input
+                type="text"
+                id="profile-postal"
+                name="postalCode"
+                placeholder="110111"
+              />
+            </div>
+            <div class="form-group">
+              <label for="profile-country">País</label>
+              <input
+                type="text"
+                id="profile-country"
+                name="country"
+                value="Colombia"
+              />
+            </div>
+            <div class="form-group">
+              <label>Tipo de Documento</label>
+              <button class="filter-option" id="profile-doc-type-btn" type="button">
+                <span class="filter-option-label">Tipo</span>
+                <span class="filter-option-value" id="profile-doc-type-value">Seleccionar</span>
+              </button>
+              <div id="profile-doc-type-list" class="filter-submenu" style="display:none;margin-top:4px"></div>
+              <input type="hidden" id="profile-doc-type" name="documentType" value="">
+            </div>
+            <div class="form-group">
+              <label for="profile-doc-number">Número de Documento</label>
+              <input
+                type="text"
+                id="profile-doc-number"
+                name="documentNumber"
+                placeholder="1234567890"
+              />
+            </div>
+            <button type="submit" class="submit-btn">Guardar Cambios</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="menu-overlay" id="filters-overlay">
+      <div class="menu-panel">
+        <div class="menu-header">
+          <h2>Filtros</h2>
+          <button class="modal-close-btn" id="close-filters-btn" aria-label="Cerrar">
+              <svg viewBox="0 0 24 24" width="24" height="24"><use href="assets/icons/close.svg#icon"/></svg>
+            </button>
+        </div>
+        <div class="menu-content">
+          <div class="filter-form">
+            <button class="filter-option" id="filter-category-btn">
+              <span class="filter-option-label">Categoría</span>
+              <span class="filter-option-value" id="filter-category-value">Todas</span>
+            </button>
+            <div class="filter-submenu" id="filter-category-submenu" style="display:none">
+              <button class="filter-suboption" data-value="">Todas</button>
+            </div>
+            <button class="filter-option" id="filter-sort-btn">
+              <span class="filter-option-label">Ordenar por</span>
+              <span class="filter-option-value" id="filter-sort-value">Por defecto</span>
+            </button>
+            <div class="filter-submenu" id="filter-sort-submenu" style="display:none">
+              <button class="filter-suboption" data-value="">Por defecto</button>
+              <button class="filter-suboption" data-value="price-asc">Menor precio</button>
+              <button class="filter-suboption" data-value="price-desc">Mayor precio</button>
+              <button class="filter-suboption" data-value="name-asc">A-Z</button>
+              <button class="filter-suboption" data-value="name-desc">Z-A</button>
+            </div>
+            <label class="filter-toggle">
+              <input type="checkbox" id="filter-instock">
+              <span class="filter-toggle-label">Solo disponibles</span>
+            </label>
+            <button class="filter-apply-btn" id="apply-filters-btn">Aplicar Filtros</button>
+            <button class="filter-reset-btn" id="reset-filters-btn">Limpiar filtros</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="menu-overlay" id="add-to-cart-overlay">
+      <div class="menu-panel">
+        <div class="menu-header">
+          <h2>Agregar al Carrito</h2>
+          <button class="modal-close-btn close-panel-btn" aria-label="Cerrar">
+              <svg viewBox="0 0 24 24" width="24" height="24"><use href="assets/icons/close.svg#icon"/></svg>
+            </button>
+        </div>
+        <div class="menu-content" id="add-to-cart-content">
+          <div class="modal-product-info">
+            <img src="" alt="" class="modal-product-image" />
+            <div>
+              <h4 class="modal-product-name"></h4>
+              <p class="modal-product-price"></p>
+            </div>
+          </div>
+
+          <div class="modal-color-selector">
+            <label>Color:</label>
+            <div class="color-options modal-color-options"></div>
+          </div>
+
+          <div class="modal-size-selector">
+            <label>Talla:</label>
+            <div class="size-options modal-size-options"></div>
+          </div>
+
+          <div class="modal-quantity-selector">
+            <label>Cantidad:</label>
+            <div class="quantity-controls">
+              <button class="modal-qty-btn minus" aria-label="Disminuir cantidad">
+                <svg viewBox="0 0 24 24" width="24" height="24"><use href="assets/icons/minus.svg#icon"/></svg>
+              </button>
+              <span class="modal-quantity">1</span>
+              <button class="modal-qty-btn plus" aria-label="Aumentar cantidad">
+                <svg viewBox="0 0 24 24" width="24" height="24"><use href="assets/icons/plus.svg#icon"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <button class="checkout-btn modal-add-btn" id="add-to-cart-confirm">Agregar al Carrito</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="menu-overlay" id="orders-overlay">
+      <div class="menu-panel">
+        <div class="menu-header">
+          <button class="back-btn" onclick="app.backFromPanel('orders-overlay')">
+            <svg viewBox="0 0 24 24"><use href="assets/icons/back-arrow.svg#icon"/></svg>
+          </button>
+          <h2>Mis Pedidos</h2>
+          <button class="modal-close-btn close-panel-btn" aria-label="Cerrar">
+              <svg viewBox="0 0 24 24" width="24" height="24"><use href="assets/icons/close.svg#icon"/></svg>
+            </button>
+        </div>
+        <div class="menu-content">
+          <div class="orders-items" id="orders-items">
+            <div class="orders-empty">
+              <svg viewBox="0 0 24 24"><use href="assets/icons/profile.svg#icon"/></svg>
+              <h3>No tienes pedidos</h3>
+              <p>Realiza tu primer pedido para verlo aquí</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="menu-overlay" id="favorites-overlay">
+      <div class="menu-panel">
+        <div class="menu-header">
+          <button class="back-btn" onclick="app.backFromPanel('favorites-overlay')">
+            <svg viewBox="0 0 24 24"><use href="assets/icons/back-arrow.svg#icon"/></svg>
+          </button>
+          <h2>Favoritos</h2>
+          <button class="modal-close-btn close-panel-btn" aria-label="Cerrar">
+              <svg viewBox="0 0 24 24" width="24" height="24"><use href="assets/icons/close.svg#icon"/></svg>
+            </button>
+        </div>
+        <div class="menu-content">
+          <div class="favorites-items" id="favorites-items">
+            <div class="favorites-empty">
+              <svg viewBox="0 0 24 24"><use href="assets/icons/favorite.svg#icon"/></svg>
+              <h3>No tienes favoritos</h3>
+              <p>Agrega productos a favoritos para verlos aquí</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="menu-overlay" id="checkout-overlay">
+      <div class="menu-panel">
+        <div class="menu-header">
+          <button class="back-btn" onclick="app.backFromPanel('checkout-overlay')">
+            <svg viewBox="0 0 24 24"><use href="assets/icons/back-arrow.svg#icon"/></svg>
+          </button>
+          <h2>Finalizar Compra</h2>
+          <button class="modal-close-btn close-panel-btn" aria-label="Cerrar">
+              <svg viewBox="0 0 24 24" width="24" height="24"><use href="assets/icons/close.svg#icon"/></svg>
+            </button>
+        </div>
+        <div class="menu-content">
+          <div class="checkout-section">
+            <h3 class="section-title">Resumen de la Orden</h3>
+            <div class="checkout-summary">
+              <div class="summary-row">
+                <span>Subtotal</span>
+                <span class="checkout-subtotal">$0</span>
+              </div>
+              <div class="summary-row">
+                <span>Envío</span>
+                <span>Gratis</span>
+              </div>
+              <div class="summary-row total-row">
+                <span>Total</span>
+                <span class="checkout-total">$0</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="checkout-section">
+            <h3 class="section-title">Dirección de Envío</h3>
+            <form id="checkout-shipping-form" class="form-container">
+              <div class="form-group">
+                <label for="checkout-name">Nombre</label>
+                <input type="text" id="checkout-name" name="name" placeholder="Tu nombre" required />
+              </div>
+              <div class="form-group">
+                <label for="checkout-address">Dirección</label>
+                <input type="text" id="checkout-address" name="address" placeholder="Calle 123 #45-67" required />
+              </div>
+              <div class="form-group">
+                <label for="checkout-city">Ciudad</label>
+                <input type="text" id="checkout-city" name="city" placeholder="Bogotá" required />
+              </div>
+              <div class="form-group">
+                <label for="checkout-phone">Teléfono</label>
+                <input type="tel" id="checkout-phone" name="phone" placeholder="3001234567" required />
+              </div>
+            </form>
+          </div>
+
+          <div class="checkout-section">
+            <h3 class="section-title">Método de Pago</h3>
+            <div class="payment-methods" id="checkout-payment-methods">
+              <p class="loading">Cargando métodos de pago...</p>
+            </div>
+          </div>
+          <button class="confirm-order-btn">Confirmar Pedido</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="notification" id="notification"></div>
+
+    <div class="menu-overlay" id="confirm-dialog-overlay">
+      <div class="menu-panel" style="max-width:400px">
+        <div class="menu-header">
+          <h2 id="confirm-dialog-title">Faltan datos</h2>
+        </div>
+        <div class="menu-content">
+          <p id="confirm-dialog-msg" style="font-size:14px;color:var(--text);line-height:1.5;margin:0 0 16px"></p>
+          <div style="display:flex;gap:8px">
+            <button class="confirm-cancel-btn" id="confirm-dialog-no" style="flex:1">No, continuar</button>
+            <button class="confirm-accept-btn" id="confirm-dialog-yes" style="flex:1">Sí, llenar ahora</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="payment-loading-overlay" id="payment-loading-overlay">
+      <div class="payment-loading-logo">
+        <svg viewBox="0 0 256 256" width="96" height="96" fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"><line x1="32" y1="64" x2="128" y2="224"/><line x1="224" y1="64" x2="128" y2="224"/><line x1="32" y1="64" x2="64" y2="64"/><line x1="192" y1="64" x2="224" y2="64"/><path d="M64 48 L128 160 L192 48 Z"/></svg>
+      </div>
+    </div>
+
+    <div class="menu-overlay" id="payment-pending-overlay">
+      <div class="menu-panel">
+        <div class="menu-header">
+          <h2><span id="payment-pending-title">Pago con Nequi</span></h2>
+          <button class="modal-close-btn close-panel-btn" aria-label="Cerrar">
+              <svg viewBox="0 0 24 24" width="24" height="24"><use href="assets/icons/close.svg#icon"/></svg>
+            </button>
+        </div>
+        <div class="menu-content">
+          <div class="payment-pending-body">
+            <div class="payment-pending-icon">
+              <svg viewBox="0 0 24 24" width="64" height="64" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="4" width="20" height="16" rx="2"/>
+                <path d="M12 12v4"/>
+                <path d="M12 8h.01"/>
+              </svg>
+            </div>
+            <p class="payment-pending-msg" id="payment-pending-msg">Revisa tu app Nequi para confirmar el pago</p>
+            <input type="hidden" id="payment-method-type" value="nequi">
+            <div class="payment-details">
+              <div class="payment-detail-row"><span>Referencia</span><strong id="payment-ref">—</strong></div>
+              <div class="payment-detail-row"><span>Orden</span><strong id="payment-order-id">—</strong></div>
+              <div class="payment-detail-row"><span>Transacción</span><strong id="payment-transaction-id">—</strong></div>
+            </div>
+            <button class="check-payment-btn confirm-accept-btn" onclick="app.checkNequiPayment()">Ya pagué, verificar</button>
+            <button class="check-later-btn" onclick="app.closeAllOverlays()">Verificar después</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="menu-overlay" id="confirm-order-overlay">
+      <div class="menu-panel">
+        <div class="menu-header">
+          <h2>Confirmar Pedido</h2>
+          <button class="modal-close-btn close-panel-btn" aria-label="Cerrar">
+              <svg viewBox="0 0 24 24" width="24" height="24"><use href="assets/icons/close.svg#icon"/></svg>
+            </button>
+        </div>
+        <div class="menu-content">
+          <div class="confirm-info">
+            <div class="confirm-total-label">Total a pagar</div>
+            <div class="confirm-total" id="confirm-total">$0</div>
+          </div>
+          <div class="confirm-details">
+            <div class="confirm-detail-row">
+              <svg viewBox="0 0 24 24" width="18" height="18"><use href="assets/icons/home.svg#icon"/></svg>
+              <span id="confirm-address">—</span>
+            </div>
+            <div class="confirm-detail-row">
+              <svg viewBox="0 0 24 24" width="18" height="18"><use href="assets/icons/phone.svg#icon"/></svg>
+              <span id="confirm-phone">—</span>
+            </div>
+            <div class="confirm-detail-row">
+              <svg viewBox="0 0 24 24" width="18" height="18"><use href="assets/icons/cart.svg#icon"/></svg>
+              <span id="confirm-payment">—</span>
+            </div>
+          </div>
+          <div class="confirm-actions">
+            <button class="confirm-cancel-btn" id="confirm-cancel-btn">Cancelar</button>
+            <button class="confirm-accept-btn" id="confirm-accept-btn">Sí, Confirmar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="js/api.js?v=7"></script>
+    <script src="js/app.js?v=15"></script>
+  </body>
+</html>

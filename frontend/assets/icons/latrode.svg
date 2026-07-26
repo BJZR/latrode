@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 256 256"
+     width="256"
+     height="256"
+     fill="none"
+     stroke="currentColor"
+     stroke-width="8"
+     stroke-linecap="round"
+     stroke-linejoin="round">
+
+  <g id="icon">
+    <line x1="32" y1="64" x2="128" y2="224"/>
+    <line x1="224" y1="64" x2="128" y2="224"/>
+    <line x1="32" y1="64" x2="64" y2="64"/>
+    <line x1="192" y1="64" x2="224" y2="64"/>
+    <path d="M64 48 L128 160 L192 48 Z"/>
+  </g>
+
+</svg>
