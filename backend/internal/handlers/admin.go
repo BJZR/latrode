@@ -195,6 +195,30 @@ func (h *AdminHandler) GetPaymentMethods(w http.ResponseWriter, r *http.Request)
 	middleware.WriteJSON(w, http.StatusOK, methods)
 }
 
+func (h *AdminHandler) UpdatePaymentMethod(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		middleware.WriteJSON(w, http.StatusBadRequest, middleware.APIError{Error: "id inválido"})
+		return
+	}
+
+	var req struct {
+		Enabled bool `json:"enabled"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		middleware.WriteJSON(w, http.StatusBadRequest, middleware.APIError{Error: "cuerpo inválido"})
+		return
+	}
+
+	if err := h.orderRepo.UpdatePaymentMethod(id, req.Enabled); err != nil {
+		middleware.WriteJSON(w, http.StatusInternalServerError, middleware.APIError{Error: "error al actualizar método de pago"})
+		return
+	}
+
+	middleware.WriteJSON(w, http.StatusOK, map[string]bool{"enabled": req.Enabled})
+}
+
 func (h *AdminHandler) GetSettings(w http.ResponseWriter, r *http.Request) {
 	settings, err := h.orderRepo.GetSettings()
 	if err != nil {
@@ -219,7 +243,8 @@ func (h *AdminHandler) GetPublicSettings(w http.ResponseWriter, r *http.Request)
 	result := map[string]string{}
 	for _, s := range settings {
 		switch s.Key {
-		case "contact_phone", "contact_email", "site_name", "site_description", "free_shipping_min":
+		case "contact_phone", "contact_email", "site_name", "site_description", "free_shipping_min",
+			"iva", "comision", "envio":
 			result[s.Key] = s.Value
 		}
 	}

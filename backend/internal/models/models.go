@@ -32,6 +32,7 @@ type Product struct {
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
 	Price       float64   `json:"price"`
+	FinalPrice  float64   `json:"finalPrice"`
 	Stock       int       `json:"stock"`
 	Category    string    `json:"category"`
 	ImageURL    string    `json:"imageUrl"`
@@ -53,6 +54,7 @@ type Color struct {
 	Name      string      `json:"name"`
 	Hex       string      `json:"hex"`
 	Stock     int         `json:"stock"`
+	ImageURL  string      `json:"imageUrl"`
 	Sizes     []SizeStock `json:"sizes,omitempty"`
 }
 
@@ -102,6 +104,7 @@ type OrderItem struct {
 	ProductID    *int    `json:"productId"`
 	ProductName  string  `json:"productName"`
 	ProductPrice float64 `json:"productPrice"`
+	ImageUrl     string  `json:"imageUrl"`
 	ColorName    string  `json:"colorName"`
 	Size         string  `json:"size"`
 	Quantity     int     `json:"quantity"`
@@ -173,12 +176,8 @@ type PaginatedResponse struct {
 type AddToCartRequest struct {
 	ProductID int    `json:"productId"`
 	ColorID   int    `json:"colorId"`
-	Quantity  int    `json:"quantity"`
 	Size      string `json:"size"`
-}
-
-type UpdateCartRequest struct {
-	Quantity int `json:"quantity"`
+	Quantity  int    `json:"quantity"`
 }
 
 type CreateOrderRequest struct {
@@ -210,10 +209,11 @@ type SizeStockInput struct {
 }
 
 type ColorInput struct {
-	Name  string           `json:"name"`
-	Hex   string           `json:"hex"`
-	Stock int              `json:"stock"`
-	Sizes []SizeStockInput `json:"sizes,omitempty"`
+	Name     string           `json:"name"`
+	Hex      string           `json:"hex"`
+	Stock    int              `json:"stock"`
+	ImageURL string           `json:"imageUrl"`
+	Sizes    []SizeStockInput `json:"sizes,omitempty"`
 }
 
 type UpdateOrderStatusRequest struct {

@@ -49,7 +49,7 @@ func (h *OrderHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var total float64
 	for _, item := range cartItems {
 		if item.Product != nil {
-			total += item.Product.Price * float64(item.Quantity)
+			total += item.Product.Price
 		}
 	}
 
@@ -78,13 +78,17 @@ func (h *OrderHandler) Create(w http.ResponseWriter, r *http.Request) {
 			if ci.Color != nil {
 				cn = ci.Color.Name
 			}
+			qty := ci.Quantity
+			if qty <= 0 {
+				qty = 1
+			}
 			items[i] = models.OrderItem{
 				ProductName:  pn,
 				ProductPrice: pp,
 				ColorName:    cn,
 				Size:         ci.Size,
-				Quantity:     ci.Quantity,
-				Subtotal:     pp * float64(ci.Quantity),
+				Quantity:     qty,
+				Subtotal:     pp * float64(qty),
 			}
 		}
 		order.Items = items

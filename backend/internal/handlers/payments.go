@@ -18,16 +18,17 @@ import (
 
 type PaymentHandler struct {
 	orderRepo *repository.OrderRepo
+	cartRepo  *repository.CartRepo
 	wompi     *wompi.Client
 	wompiCfg  *wompi.Config
 }
 
-func NewPaymentHandler(orderRepo *repository.OrderRepo, wc *wompi.Client, wcfg *wompi.Config) *PaymentHandler {
-	return &PaymentHandler{orderRepo: orderRepo, wompi: wc, wompiCfg: wcfg}
+func NewPaymentHandler(orderRepo *repository.OrderRepo, cartRepo *repository.CartRepo, wc *wompi.Client, wcfg *wompi.Config) *PaymentHandler {
+	return &PaymentHandler{orderRepo: orderRepo, cartRepo: cartRepo, wompi: wc, wompiCfg: wcfg}
 }
 
 func (h *PaymentHandler) ListMethods(w http.ResponseWriter, r *http.Request) {
-	methods, err := h.orderRepo.GetPaymentMethods()
+	methods, err := h.orderRepo.GetEnabledPaymentMethods()
 	if err != nil {
 		middleware.WriteJSON(w, http.StatusInternalServerError, middleware.APIError{Error: "error al obtener métodos de pago"})
 		return
@@ -266,7 +267,8 @@ func (h *PaymentHandler) CheckTransaction(w http.ResponseWriter, r *http.Request
 	if tx.Status != order.WompiStatus {
 		h.orderRepo.SaveWompiTransaction(order.ID, tx.ID, tx.Status, tx.Reference)
 		if tx.Status == "APPROVED" {
-			h.orderRepo.UpdateStatus(order.ID, order.Status, "paid")
+			h.orderRepo.UpdateStatus(order.ID, "paid", "paid")
+			h.cartRepo.Clear(order.UserID)
 		}
 	}
 
@@ -311,7 +313,11 @@ func (h *PaymentHandler) Webhook(w http.ResponseWriter, r *http.Request) {
 		if orderID, err := strconv.Atoi(ref); err == nil && orderID > 0 {
 			h.orderRepo.SaveWompiTransaction(orderID, evt.Data.Transaction.ID, evt.Data.Transaction.Status, evt.Data.Transaction.Reference)
 			if evt.Data.Transaction.Status == "APPROVED" {
-				h.orderRepo.UpdateStatus(orderID, "confirmed", "paid")
+				order, _ := h.orderRepo.FindByID(orderID)
+				if order != nil {
+					h.orderRepo.UpdateStatus(orderID, "paid", "paid")
+					h.cartRepo.Clear(order.UserID)
+				}
 			}
 		}
 	}

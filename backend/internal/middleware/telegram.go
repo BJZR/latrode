@@ -43,7 +43,10 @@ func SendOrderNotification(cfg *config.Config, order *models.Order, user *models
 		if item.Size != "" {
 			line += fmt.Sprintf(" \\[%s\\]", escapeMD(item.Size))
 		}
-		line += fmt.Sprintf(" x%d \\$%.0f\n", item.Quantity, item.Subtotal)
+		if item.Quantity > 1 {
+			line += fmt.Sprintf(" x%d", item.Quantity)
+		}
+		line += fmt.Sprintf(" \\$%.0f\n", item.Subtotal)
 		b.WriteString(line)
 	}
 

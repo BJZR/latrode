@@ -41,9 +41,9 @@ func main() {
 	resetRepo := repository.NewPasswordResetRepo(db)
 
 	authHandler := handlers.NewAuthHandler(userRepo, resetRepo, cfg)
-	productHandler := handlers.NewProductHandler(productRepo)
-	cartHandler := handlers.NewCartHandler(cartRepo)
-	favHandler := handlers.NewFavoriteHandler(favRepo)
+	productHandler := handlers.NewProductHandler(productRepo, orderRepo)
+	cartHandler := handlers.NewCartHandler(cartRepo, orderRepo)
+	favHandler := handlers.NewFavoriteHandler(favRepo, orderRepo)
 	wompiCfg := &wompi.Config{
 		PublicKey:    cfg.WompiPublicKey,
 		SecretKey:    cfg.WompiSecretKey,
@@ -58,7 +58,7 @@ func main() {
 
 	adminHandler := handlers.NewAdminHandler(orderRepo, productRepo, userRepo, emailService)
 	orderHandler := handlers.NewOrderHandler(orderRepo, cartRepo, cfg)
-	paymentHandler := handlers.NewPaymentHandler(orderRepo, wompiClient, wompiCfg)
+	paymentHandler := handlers.NewPaymentHandler(orderRepo, cartRepo, wompiClient, wompiCfg)
 	oauthHandler := handlers.NewOAuthHandler(cfg, userRepo)
 	uploadHandler := handlers.NewUploadHandler(cfg)
 
@@ -142,6 +142,7 @@ func main() {
 	adminMux.HandleFunc("DELETE /products/{id}", adminHandler.DeleteProduct)
 	adminMux.HandleFunc("GET /users", adminHandler.ListUsers)
 	adminMux.HandleFunc("GET /payment-methods", adminHandler.GetPaymentMethods)
+	adminMux.HandleFunc("PUT /payment-methods/{id}", adminHandler.UpdatePaymentMethod)
 	adminMux.HandleFunc("GET /settings", adminHandler.GetSettings)
 	adminMux.HandleFunc("PUT /settings", adminHandler.UpdateSetting)
 	adminMux.HandleFunc("GET /logs", adminHandler.GetLogs)
@@ -163,13 +164,15 @@ func main() {
 	fs := http.FileServer(http.Dir(cfg.Frontend))
 	cacheFs := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
-		case strings.HasSuffix(r.URL.Path, ".html"):
+		case strings.HasSuffix(r.URL.Path, ".html"), strings.HasSuffix(r.URL.Path, ".js"):
 			w.Header().Set("Cache-Control", "no-cache")
-		case strings.HasSuffix(r.URL.Path, ".css"), strings.HasSuffix(r.URL.Path, ".js"):
+		case strings.HasSuffix(r.URL.Path, ".css"):
 			w.Header().Set("Cache-Control", "public, max-age=3600")
+		case strings.HasSuffix(r.URL.Path, ".svg"):
+			w.Header().Set("Cache-Control", "no-cache")
 		case strings.HasSuffix(r.URL.Path, ".jpg"), strings.HasSuffix(r.URL.Path, ".jpeg"),
 			strings.HasSuffix(r.URL.Path, ".png"), strings.HasSuffix(r.URL.Path, ".webp"),
-			strings.HasSuffix(r.URL.Path, ".svg"), strings.HasSuffix(r.URL.Path, ".gif"):
+			strings.HasSuffix(r.URL.Path, ".gif"):
 			w.Header().Set("Cache-Control", "public, max-age=604800, immutable")
 		case strings.HasSuffix(r.URL.Path, ".ttf"), strings.HasSuffix(r.URL.Path, ".woff"),
 			strings.HasSuffix(r.URL.Path, ".woff2"):

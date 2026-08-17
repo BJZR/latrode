@@ -32,7 +32,6 @@ func Connect(cfg *config.Config) (*DB, error) {
 }
 
 func (db *DB) cleanPaymentMethods() {
-	db.DB.Exec(`DELETE FROM payment_methods`)
 	for _, m := range []struct {
 		Name        string
 		Description string
@@ -42,7 +41,9 @@ func (db *DB) cleanPaymentMethods() {
 		{"daviplata", "Paga desde la app DaviPlata"},
 		{"boton_bancolombia", "Paga con Botón Bancolombia"},
 	} {
-		db.DB.Exec(`INSERT INTO payment_methods (name, description, enabled, created_at) VALUES ($1, $2, true, NOW())`, m.Name, m.Description)
+		db.DB.Exec(`INSERT INTO payment_methods (name, description, enabled, created_at)
+			SELECT $1, $2, true, NOW()
+			WHERE NOT EXISTS (SELECT 1 FROM payment_methods WHERE name = $1)`, m.Name, m.Description)
 	}
 }
 

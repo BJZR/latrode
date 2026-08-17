@@ -56,7 +56,7 @@ func (r *ProductRepo) FindAll() ([]models.Product, error) {
 
 func (r *ProductRepo) Count() (int, error) {
 	var total int
-	err := r.db.DB.QueryRow(`SELECT COUNT(*) FROM products WHERE stock > 0`).Scan(&total)
+	err := r.db.DB.QueryRow(`SELECT COUNT(*) FROM products`).Scan(&total)
 	return total, err
 }
 
@@ -64,7 +64,7 @@ func (r *ProductRepo) FindAllPaginated(page, limit int) ([]models.Product, error
 	offset := (page - 1) * limit
 	rows, err := r.db.DB.Query(
 		`SELECT id, name, description, price, stock, category, image_url, sizes, material, care, created_at
-		 FROM products WHERE stock > 0 ORDER BY created_at DESC LIMIT $1 OFFSET $2`, limit, offset)
+		 FROM products ORDER BY created_at DESC LIMIT $1 OFFSET $2`, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -114,8 +114,6 @@ func (r *ProductRepo) buildFilter(query, name, category string, minPrice, maxPri
 	var conds []string
 	var args []interface{}
 	argIdx := 1
-
-	conds = append(conds, "stock > 0")
 
 	if query != "" {
 		tsQuery := "plainto_tsquery('spanish', $" + strconv.Itoa(argIdx) + ")"
@@ -231,8 +229,8 @@ func (r *ProductRepo) saveColors(productID int, cols []models.ColorInput) ([]mod
 	var colors []models.Color
 	for _, c := range cols {
 		color, err := scanColor(r.db.DB.QueryRow(
-			`INSERT INTO product_colors (product_id, name, hex, stock) VALUES ($1, $2, $3, $4)
-			 RETURNING id, product_id, name, hex, stock`, productID, c.Name, c.Hex, c.Stock))
+			`INSERT INTO product_colors (product_id, name, hex, stock, image_url) VALUES ($1, $2, $3, $4, $5)
+			 RETURNING id, product_id, name, hex, stock, image_url`, productID, c.Name, c.Hex, c.Stock, c.ImageURL))
 		if err != nil {
 			return nil, err
 		}
@@ -303,7 +301,7 @@ func (r *ProductRepo) FindTopSelling(limit int) ([]models.Product, error) {
 		 FROM products p
 		 LEFT JOIN order_items oi ON oi.product_id = p.id
 		 GROUP BY p.id
-		 ORDER BY COALESCE(SUM(oi.quantity), 0) DESC LIMIT $1`, limit)
+		 ORDER BY COUNT(oi.id) DESC LIMIT $1`, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -350,7 +348,7 @@ func (r *ProductRepo) findSizeStocks(colorID int) []models.SizeStock {
 
 func (r *ProductRepo) findColors(productID int) []models.Color {
 	rows, err := r.db.DB.Query(
-		`SELECT id, product_id, name, hex, stock FROM product_colors WHERE product_id=$1`, productID)
+		`SELECT id, product_id, name, hex, stock, image_url FROM product_colors WHERE product_id=$1`, productID)
 	if err != nil {
 		return []models.Color{}
 	}
@@ -373,7 +371,7 @@ func (r *ProductRepo) findColors(productID int) []models.Color {
 
 func scanColor(s scannable) (*models.Color, error) {
 	c := &models.Color{}
-	err := s.Scan(&c.ID, &c.ProductID, &c.Name, &c.Hex, &c.Stock)
+	err := s.Scan(&c.ID, &c.ProductID, &c.Name, &c.Hex, &c.Stock, &c.ImageURL)
 	if err != nil {
 		return nil, err
 	}
@@ -391,7 +389,7 @@ func (r *ProductRepo) loadColorsForProducts(products []models.Product) {
 		placeholders[i] = fmt.Sprintf("$%d", i+1)
 	}
 	colorQuery := fmt.Sprintf(
-		`SELECT id, product_id, name, hex, stock FROM product_colors WHERE product_id IN (%s)`,
+		`SELECT id, product_id, name, hex, stock, image_url FROM product_colors WHERE product_id IN (%s)`,
 		strings.Join(placeholders, ","))
 
 	rows, err := r.db.DB.Query(colorQuery, ids...)

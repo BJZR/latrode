@@ -11,11 +11,12 @@ import (
 )
 
 type FavoriteHandler struct {
-	favRepo *repository.FavoriteRepo
+	favRepo   *repository.FavoriteRepo
+	orderRepo *repository.OrderRepo
 }
 
-func NewFavoriteHandler(favRepo *repository.FavoriteRepo) *FavoriteHandler {
-	return &FavoriteHandler{favRepo: favRepo}
+func NewFavoriteHandler(favRepo *repository.FavoriteRepo, orderRepo *repository.OrderRepo) *FavoriteHandler {
+	return &FavoriteHandler{favRepo: favRepo, orderRepo: orderRepo}
 }
 
 func (h *FavoriteHandler) List(w http.ResponseWriter, r *http.Request) {
@@ -33,6 +34,13 @@ func (h *FavoriteHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	if favs == nil {
 		favs = []models.Favorite{}
+	}
+
+	priceSettings := loadPriceSettings(h.orderRepo)
+	for i := range favs {
+		if favs[i].Product != nil {
+			favs[i].Product.FinalPrice = computeFinalPrice(favs[i].Product.Price, priceSettings)
+		}
 	}
 
 	middleware.WriteJSON(w, http.StatusOK, favs)
@@ -63,6 +71,13 @@ func (h *FavoriteHandler) Add(w http.ResponseWriter, r *http.Request) {
 		favs = []models.Favorite{}
 	}
 
+	priceSettings := loadPriceSettings(h.orderRepo)
+	for i := range favs {
+		if favs[i].Product != nil {
+			favs[i].Product.FinalPrice = computeFinalPrice(favs[i].Product.Price, priceSettings)
+		}
+	}
+
 	middleware.WriteJSON(w, http.StatusOK, favs)
 }
 
@@ -88,6 +103,13 @@ func (h *FavoriteHandler) Remove(w http.ResponseWriter, r *http.Request) {
 	favs, _ := h.favRepo.FindByUserID(user.ID)
 	if favs == nil {
 		favs = []models.Favorite{}
+	}
+
+	priceSettings := loadPriceSettings(h.orderRepo)
+	for i := range favs {
+		if favs[i].Product != nil {
+			favs[i].Product.FinalPrice = computeFinalPrice(favs[i].Product.Price, priceSettings)
+		}
 	}
 
 	middleware.WriteJSON(w, http.StatusOK, favs)

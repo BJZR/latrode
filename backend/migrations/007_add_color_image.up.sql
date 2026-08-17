@@ -1,0 +1,1 @@
+ALTER TABLE product_colors ADD COLUMN IF NOT EXISTS image_url TEXT DEFAULT '';

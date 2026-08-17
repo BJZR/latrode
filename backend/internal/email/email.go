@@ -196,14 +196,16 @@ func (s *Service) buildOrderConfirmationHTML(orderID int, username string, total
 		if item.Size != "" {
 			sizeStr = fmt.Sprintf(" <span style=\"color:#888\">[%s]</span>", item.Size)
 		}
+		qtyStr := ""
+		if item.Quantity > 1 {
+			qtyStr = fmt.Sprintf(" <span style=\"color:#888\">x%d</span>", item.Quantity)
+		}
 		rows += fmt.Sprintf(`
 			<tr>
-				<td style="padding:8px;border-bottom:1px solid #eee">%s%s%s</td>
-				<td style="padding:8px;border-bottom:1px solid #eee;text-align:center">%d</td>
+				<td style="padding:8px;border-bottom:1px solid #eee">%s%s%s%s</td>
 				<td style="padding:8px;border-bottom:1px solid #eee;text-align:right">$%s</td>
 			</tr>`,
-			item.ProductName, colorStr, sizeStr,
-			item.Quantity,
+			item.ProductName, colorStr, sizeStr, qtyStr,
 			formatNumber(item.Subtotal))
 	}
 
@@ -221,7 +223,6 @@ func (s *Service) buildOrderConfirmationHTML(orderID int, username string, total
 		<table style="width:100%%;border-collapse:collapse;margin-bottom:24px">
 			<tr style="background:#f9f9f9">
 				<th style="padding:8px;text-align:left;font-size:12px;text-transform:uppercase;color:#888">Producto</th>
-				<th style="padding:8px;text-align:center;font-size:12px;text-transform:uppercase;color:#888">Cant.</th>
 				<th style="padding:8px;text-align:right;font-size:12px;text-transform:uppercase;color:#888">Subtotal</th>
 			</tr>
 			%s

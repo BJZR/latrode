@@ -38,9 +38,11 @@ func (r *OrderRepo) FindByUserID(userID int) ([]models.Order, error) {
 		`SELECT o.id, o.user_id, o.total, o.status, o.payment_status, o.payment_method,
 		 o.shipping_name, o.shipping_phone, o.shipping_address, o.shipping_city, o.shipping_postal_code, o.shipping_country,
 		 COALESCE(o.wompi_transaction_id,''), COALESCE(o.wompi_status,''), COALESCE(o.wompi_reference,''), o.created_at,
-		 oi.id, oi.order_id, oi.product_id, oi.product_name, oi.product_price, oi.color_name, oi.size, oi.quantity, oi.subtotal
+		 oi.id, oi.order_id, oi.product_id, oi.product_name, oi.product_price, oi.color_name, oi.size, oi.quantity, oi.subtotal,
+		 COALESCE(p.image_url,'')
 		 FROM orders o
 		 LEFT JOIN order_items oi ON oi.order_id = o.id
+		 LEFT JOIN products p ON p.id = oi.product_id
 		 WHERE o.user_id=$1
 		 ORDER BY o.created_at DESC, oi.id`, userID)
 	if err != nil {
@@ -54,14 +56,14 @@ func (r *OrderRepo) FindByUserID(userID int) ([]models.Order, error) {
 	for rows.Next() {
 		var o models.Order
 		var oiID, oiOrderID, oiProductID sql.NullInt64
-		var oiProductName, oiColorName, oiSize sql.NullString
+		var oiProductName, oiColorName, oiSize, oiImageUrl sql.NullString
 		var oiProductPrice, oiSubtotal sql.NullFloat64
 		var oiQuantity sql.NullInt64
 
 		err := rows.Scan(&o.ID, &o.UserID, &o.Total, &o.Status, &o.PaymentStatus, &o.PaymentMethod,
 			&o.ShippingName, &o.ShippingPhone, &o.ShippingAddress, &o.ShippingCity, &o.ShippingPostalCode, &o.ShippingCountry,
 			&o.WompiTransactionID, &o.WompiStatus, &o.WompiReference, &o.CreatedAt,
-			&oiID, &oiOrderID, &oiProductID, &oiProductName, &oiProductPrice, &oiColorName, &oiSize, &oiQuantity, &oiSubtotal)
+			&oiID, &oiOrderID, &oiProductID, &oiProductName, &oiProductPrice, &oiColorName, &oiSize, &oiQuantity, &oiSubtotal, &oiImageUrl)
 		if err != nil {
 			return nil, err
 		}
@@ -77,6 +79,7 @@ func (r *OrderRepo) FindByUserID(userID int) ([]models.Order, error) {
 					Subtotal:     oiSubtotal.Float64,
 					ProductName:  oiProductName.String,
 					ProductPrice: oiProductPrice.Float64,
+					ImageUrl:     oiImageUrl.String,
 				}
 				if oiProductID.Valid {
 					pid := int(oiProductID.Int64)
@@ -96,6 +99,7 @@ func (r *OrderRepo) FindByUserID(userID int) ([]models.Order, error) {
 					Subtotal:     oiSubtotal.Float64,
 					ProductName:  oiProductName.String,
 					ProductPrice: oiProductPrice.Float64,
+					ImageUrl:     oiImageUrl.String,
 				}
 				if oiProductID.Valid {
 					pid := int(oiProductID.Int64)
@@ -141,20 +145,20 @@ func (r *OrderRepo) Create(userID int, req *models.CreateOrderRequest,
 		if ci.Product != nil {
 			var currentStock int
 			tx.QueryRow(`SELECT stock FROM products WHERE id=$1 FOR UPDATE`, ci.Product.ID).Scan(&currentStock)
-			if currentStock < ci.Quantity {
+			if currentStock != -1 && currentStock < 1 {
 				return nil, ErrInsufficientStock
 			}
 		}
 		if ci.ColorID != nil && *ci.ColorID > 0 {
 			var colorStock int
 			tx.QueryRow(`SELECT stock FROM product_colors WHERE id=$1 FOR UPDATE`, *ci.ColorID).Scan(&colorStock)
-			if colorStock < ci.Quantity {
+			if colorStock != -1 && colorStock < 1 {
 				return nil, ErrInsufficientStock
 			}
 			if ci.Size != "" {
 				var invStock int
 				tx.QueryRow(`SELECT stock FROM inventory WHERE color_id=$1 AND size=$2 FOR UPDATE`, *ci.ColorID, ci.Size).Scan(&invStock)
-				if invStock < ci.Quantity {
+				if invStock != -1 && invStock < 1 {
 					return nil, ErrInsufficientStock
 				}
 			}
@@ -165,23 +169,31 @@ func (r *OrderRepo) Create(userID int, req *models.CreateOrderRequest,
 	if pm == "" {
 		pm = "cash_on_delivery"
 	}
+	orderStatus := "pending"
+	if pm == "cash_on_delivery" {
+		orderStatus = "paid"
+	}
 	o, err := scanOrder(tx.QueryRow(
 		`INSERT INTO orders (user_id, total, status, payment_method,
 		 shipping_name, shipping_phone, shipping_address, shipping_city, shipping_postal_code, shipping_country)
-		 VALUES ($1, $2, 'pending', $3, $4, $5, $6, $7, $8, $9)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 		 RETURNING id, user_id, total, status, payment_status, payment_method,
 		 shipping_name, shipping_phone, shipping_address, shipping_city, shipping_postal_code, shipping_country,
 		 COALESCE(wompi_transaction_id,''), COALESCE(wompi_status,''), COALESCE(wompi_reference,''), created_at`,
-		userID, total, pm, req.ShippingName, req.ShippingPhone, req.ShippingAddress,
+		userID, total, orderStatus, pm, req.ShippingName, req.ShippingPhone, req.ShippingAddress,
 		req.ShippingCity, req.ShippingPostalCode, req.ShippingCountry))
 	if err != nil {
 		return nil, err
 	}
 
 	for _, ci := range cartItems {
-		subtotal := float64(ci.Quantity)
+		qty := ci.Quantity
+		if qty <= 0 {
+			qty = 1
+		}
+		subtotal := 0.0
 		if ci.Product != nil {
-			subtotal *= ci.Product.Price
+			subtotal = ci.Product.Price * float64(qty)
 		}
 		colorName := ""
 		productName := ""
@@ -203,7 +215,7 @@ func (r *OrderRepo) Create(userID int, req *models.CreateOrderRequest,
 			`INSERT INTO order_items (order_id, product_id, product_name, product_price, color_name, size, quantity, subtotal)
 			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 			 RETURNING id, order_id, product_id, product_name, product_price, color_name, size, quantity, subtotal`,
-			o.ID, productID, productName, productPrice, colorName, ci.Size, ci.Quantity, subtotal,
+			o.ID, productID, productName, productPrice, colorName, ci.Size, qty, subtotal,
 		).Scan(&item.ID, &item.OrderID, &item.ProductID, &item.ProductName, &item.ProductPrice,
 			&item.ColorName, &item.Size, &item.Quantity, &item.Subtotal)
 		if err != nil {
@@ -213,28 +225,32 @@ func (r *OrderRepo) Create(userID int, req *models.CreateOrderRequest,
 
 		if ci.Product != nil {
 			_, err = tx.Exec(
-				`UPDATE products SET stock = stock - $1 WHERE id = $2`,
-				ci.Quantity, ci.Product.ID)
+				`UPDATE products SET stock = stock - $1 WHERE id = $2 AND stock != -1`,
+				qty, ci.Product.ID)
 			if err != nil {
 				return nil, fmt.Errorf("error actualizando stock producto: %w", err)
 			}
 		}
 		if ci.ColorID != nil && *ci.ColorID > 0 {
 			_, err = tx.Exec(
-				`UPDATE product_colors SET stock = stock - $1 WHERE id = $2`,
-				ci.Quantity, *ci.ColorID)
+				`UPDATE product_colors SET stock = stock - $1 WHERE id = $2 AND stock != -1`,
+				qty, *ci.ColorID)
 			if err != nil {
 				return nil, fmt.Errorf("error actualizando stock color: %w", err)
 			}
 			if ci.Size != "" {
 				_, err = tx.Exec(
-					`UPDATE inventory SET stock = stock - $1 WHERE color_id = $2 AND size = $3`,
-					ci.Quantity, *ci.ColorID, ci.Size)
+					`UPDATE inventory SET stock = stock - $1 WHERE color_id = $2 AND size = $3 AND stock != -1`,
+					qty, *ci.ColorID, ci.Size)
 				if err != nil {
 					return nil, fmt.Errorf("error actualizando inventory: %w", err)
 				}
 			}
 		}
+	}
+
+	if _, err := tx.Exec(`DELETE FROM cart_items WHERE user_id=$1`, userID); err != nil {
+		return nil, fmt.Errorf("error vaciando carrito: %w", err)
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -340,8 +356,11 @@ func (r *OrderRepo) GetDashboardStats() (*models.DashboardStats, error) {
 
 func (r *OrderRepo) findItems(orderID int) []models.OrderItem {
 	rows, err := r.db.DB.Query(
-		`SELECT id, order_id, product_id, product_name, product_price, color_name, size, quantity, subtotal
-		 FROM order_items WHERE order_id=$1`, orderID)
+		`SELECT oi.id, oi.order_id, oi.product_id, oi.product_name, oi.product_price, oi.color_name, oi.size, oi.quantity, oi.subtotal,
+		 COALESCE(p.image_url,'')
+		 FROM order_items oi
+		 LEFT JOIN products p ON p.id = oi.product_id
+		 WHERE oi.order_id=$1`, orderID)
 	if err != nil {
 		return []models.OrderItem{}
 	}
@@ -351,7 +370,7 @@ func (r *OrderRepo) findItems(orderID int) []models.OrderItem {
 	for rows.Next() {
 		var item models.OrderItem
 		if err := rows.Scan(&item.ID, &item.OrderID, &item.ProductID, &item.ProductName,
-			&item.ProductPrice, &item.ColorName, &item.Size, &item.Quantity, &item.Subtotal); err != nil {
+			&item.ProductPrice, &item.ColorName, &item.Size, &item.Quantity, &item.Subtotal, &item.ImageUrl); err != nil {
 			continue
 		}
 		items = append(items, item)
@@ -396,6 +415,30 @@ func (r *OrderRepo) GetLogs() ([]models.ActivityLog, error) {
 func (r *OrderRepo) GetPaymentMethods() ([]models.PaymentMethod, error) {
 	rows, err := r.db.DB.Query(
 		`SELECT id, name, description, enabled, created_at FROM payment_methods ORDER BY id`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var methods []models.PaymentMethod
+	for rows.Next() {
+		var m models.PaymentMethod
+		if err := rows.Scan(&m.ID, &m.Name, &m.Description, &m.Enabled, &m.CreatedAt); err != nil {
+			return nil, err
+		}
+		methods = append(methods, m)
+	}
+	return methods, nil
+}
+
+func (r *OrderRepo) UpdatePaymentMethod(id int, enabled bool) error {
+	_, err := r.db.DB.Exec(`UPDATE payment_methods SET enabled = $1 WHERE id = $2`, enabled, id)
+	return err
+}
+
+func (r *OrderRepo) GetEnabledPaymentMethods() ([]models.PaymentMethod, error) {
+	rows, err := r.db.DB.Query(
+		`SELECT id, name, description, enabled, created_at FROM payment_methods WHERE enabled = true ORDER BY id`)
 	if err != nil {
 		return nil, err
 	}
@@ -483,27 +526,42 @@ func (r *OrderRepo) CancelOrder(orderID, userID int) error {
 		if err := rows.Scan(&it.productID, &it.colorName, &it.size, &it.quantity); err != nil {
 			return err
 		}
+		if it.quantity <= 0 {
+			it.quantity = 1
+		}
 		items = append(items, it)
 	}
 
 	for _, it := range items {
 		if it.productID != nil {
-			tx.Exec(`UPDATE products SET stock = stock + $1 WHERE id = $2`, it.quantity, *it.productID)
+			tx.Exec(`UPDATE products SET stock = stock + $1 WHERE id = $2 AND stock != -1`, it.quantity, *it.productID)
 		}
+		var colorID int
 		if it.colorName != "" {
-			var colorID int
-			err := tx.QueryRow(`SELECT id FROM product_colors WHERE product_id=$1 AND name=$2`, it.productID, it.colorName).Scan(&colorID)
-			if err == nil {
-				tx.Exec(`UPDATE product_colors SET stock = stock + $1 WHERE id = $2`, it.quantity, colorID)
+			tx.QueryRow(`SELECT id FROM product_colors WHERE product_id=$1 AND name=$2`, it.productID, it.colorName).Scan(&colorID)
+			if colorID > 0 {
+				tx.Exec(`UPDATE product_colors SET stock = stock + $1 WHERE id = $2 AND stock != -1`, it.quantity, colorID)
 				if it.size != "" {
-					tx.Exec(`UPDATE inventory SET stock = stock + $1 WHERE color_id = $2 AND size = $3`, it.quantity, colorID, it.size)
+					tx.Exec(`UPDATE inventory SET stock = stock + $1 WHERE color_id = $2 AND size = $3 AND stock != -1`, it.quantity, colorID, it.size)
 				}
+			}
+		}
+		if it.productID != nil {
+			var existingCartID int
+			err := tx.QueryRow(
+				`SELECT id FROM cart_items WHERE user_id=$1 AND product_id=$2 AND COALESCE(color_id,0)=$3 AND COALESCE(size,'')=$4`,
+				userID, *it.productID, colorID, it.size).Scan(&existingCartID)
+			if err != nil {
+				tx.Exec(`INSERT INTO cart_items (user_id, product_id, color_id, size, quantity) VALUES ($1, $2, $3, NULLIF($4,''), $5)`,
+					userID, *it.productID, colorID, it.size, it.quantity)
+			} else {
+				tx.Exec(`UPDATE cart_items SET quantity = quantity + $1 WHERE id=$2`, it.quantity, existingCartID)
 			}
 		}
 	}
 
 	tx.Exec(`DELETE FROM order_items WHERE order_id=$1`, orderID)
-	tx.Exec(`DELETE FROM orders WHERE id=$1`, orderID)
+	tx.Exec(`UPDATE orders SET status='cancelled' WHERE id=$1`, orderID)
 
 	return tx.Commit()
 }

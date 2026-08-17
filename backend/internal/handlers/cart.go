@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"latrode-fusion/internal/middleware"
 	"latrode-fusion/internal/models"
@@ -12,11 +11,12 @@ import (
 )
 
 type CartHandler struct {
-	cartRepo *repository.CartRepo
+	cartRepo  *repository.CartRepo
+	orderRepo *repository.OrderRepo
 }
 
-func NewCartHandler(cartRepo *repository.CartRepo) *CartHandler {
-	return &CartHandler{cartRepo: cartRepo}
+func NewCartHandler(cartRepo *repository.CartRepo, orderRepo *repository.OrderRepo) *CartHandler {
+	return &CartHandler{cartRepo: cartRepo, orderRepo: orderRepo}
 }
 
 func (h *CartHandler) GetCart(w http.ResponseWriter, r *http.Request) {
@@ -36,6 +36,13 @@ func (h *CartHandler) GetCart(w http.ResponseWriter, r *http.Request) {
 		items = []models.CartItem{}
 	}
 
+	priceSettings := loadPriceSettings(h.orderRepo)
+	for i := range items {
+		if items[i].Product != nil {
+			items[i].Product.FinalPrice = computeFinalPrice(items[i].Product.Price, priceSettings)
+		}
+	}
+
 	middleware.WriteJSON(w, http.StatusOK, items)
 }
 
@@ -52,58 +59,8 @@ func (h *CartHandler) AddToCart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Quantity < 1 {
-		req.Quantity = 1
-	}
-
 	if err := h.cartRepo.AddItem(user.ID, req.ProductID, req.ColorID, req.Size, req.Quantity); err != nil {
-		if strings.Contains(err.Error(), "stock insuficiente") {
-			middleware.WriteJSON(w, http.StatusConflict, middleware.APIError{Error: err.Error()})
-		} else {
-			middleware.WriteJSON(w, http.StatusInternalServerError, middleware.APIError{Error: "error al agregar al carrito"})
-		}
-		return
-	}
-
-	items, _ := h.cartRepo.FindByUserID(user.ID)
-	if items == nil {
-		items = []models.CartItem{}
-	}
-
-	middleware.WriteJSON(w, http.StatusOK, items)
-}
-
-func (h *CartHandler) UpdateCartItem(w http.ResponseWriter, r *http.Request) {
-	user := middleware.GetUser(r)
-	if user == nil {
-		middleware.WriteJSON(w, http.StatusUnauthorized, middleware.APIError{Error: "no autorizado"})
-		return
-	}
-
-	idStr := r.PathValue("id")
-	itemID, err := strconv.Atoi(idStr)
-	if err != nil {
-		middleware.WriteJSON(w, http.StatusBadRequest, middleware.APIError{Error: "id inválido"})
-		return
-	}
-
-	var req models.UpdateCartRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		middleware.WriteJSON(w, http.StatusBadRequest, middleware.APIError{Error: "datos inválidos"})
-		return
-	}
-
-	if req.Quantity < 1 {
-		middleware.WriteJSON(w, http.StatusBadRequest, middleware.APIError{Error: "cantidad inválida"})
-		return
-	}
-
-	if err := h.cartRepo.UpdateQuantity(itemID, user.ID, req.Quantity); err != nil {
-		if strings.Contains(err.Error(), "stock insuficiente") {
-			middleware.WriteJSON(w, http.StatusConflict, middleware.APIError{Error: err.Error()})
-		} else {
-			middleware.WriteJSON(w, http.StatusInternalServerError, middleware.APIError{Error: "error al actualizar carrito"})
-		}
+		middleware.WriteJSON(w, http.StatusConflict, middleware.APIError{Error: err.Error()})
 		return
 	}
 
@@ -155,4 +112,38 @@ func (h *CartHandler) ClearCart(w http.ResponseWriter, r *http.Request) {
 	}
 
 	middleware.WriteJSON(w, http.StatusOK, []models.CartItem{})
+}
+
+func (h *CartHandler) UpdateCartItem(w http.ResponseWriter, r *http.Request) {
+	user := middleware.GetUser(r)
+	if user == nil {
+		middleware.WriteJSON(w, http.StatusUnauthorized, middleware.APIError{Error: "no autorizado"})
+		return
+	}
+
+	idStr := r.PathValue("id")
+	itemID, err := strconv.Atoi(idStr)
+	if err != nil {
+		middleware.WriteJSON(w, http.StatusBadRequest, middleware.APIError{Error: "id inválido"})
+		return
+	}
+
+	var req struct {
+		Quantity int `json:"quantity"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		middleware.WriteJSON(w, http.StatusBadRequest, middleware.APIError{Error: "datos inválidos"})
+		return
+	}
+
+	if err := h.cartRepo.UpdateQuantity(itemID, user.ID, req.Quantity); err != nil {
+		middleware.WriteJSON(w, http.StatusInternalServerError, middleware.APIError{Error: "error al actualizar"})
+		return
+	}
+
+	items, _ := h.cartRepo.FindByUserID(user.ID)
+	if items == nil {
+		items = []models.CartItem{}
+	}
+	middleware.WriteJSON(w, http.StatusOK, items)
 }

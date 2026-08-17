@@ -19,10 +19,39 @@ func parseFloat(s string) float64 {
 
 type ProductHandler struct {
 	productRepo *repository.ProductRepo
+	orderRepo   *repository.OrderRepo
 }
 
-func NewProductHandler(productRepo *repository.ProductRepo) *ProductHandler {
-	return &ProductHandler{productRepo: productRepo}
+func NewProductHandler(productRepo *repository.ProductRepo, orderRepo *repository.OrderRepo) *ProductHandler {
+	return &ProductHandler{productRepo: productRepo, orderRepo: orderRepo}
+}
+
+func computeFinalPrice(price float64, settings map[string]string) float64 {
+	iva := 0.0
+	comision := 0.0
+	envio := 0.0
+	if v, ok := settings["iva"]; ok {
+		iva, _ = strconv.ParseFloat(v, 64)
+	}
+	if v, ok := settings["comision"]; ok {
+		comision, _ = strconv.ParseFloat(v, 64)
+	}
+	if v, ok := settings["envio"]; ok {
+		envio, _ = strconv.ParseFloat(v, 64)
+	}
+	return price + (price * iva / 100) + comision + envio
+}
+
+func loadPriceSettings(r *repository.OrderRepo) map[string]string {
+	settings, err := r.GetSettings()
+	if err != nil || settings == nil {
+		return map[string]string{}
+	}
+	m := map[string]string{}
+	for _, s := range settings {
+		m[s.Key] = s.Value
+	}
+	return m
 }
 
 func (h *ProductHandler) List(w http.ResponseWriter, r *http.Request) {
@@ -70,6 +99,11 @@ func (h *ProductHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	priceSettings := loadPriceSettings(h.orderRepo)
+	for i := range products {
+		products[i].FinalPrice = computeFinalPrice(products[i].Price, priceSettings)
+	}
+
 	totalPages := (total + limit - 1) / limit
 
 	middleware.WriteJSON(w, http.StatusOK, models.PaginatedResponse{
@@ -94,6 +128,9 @@ func (h *ProductHandler) Get(w http.ResponseWriter, r *http.Request) {
 		middleware.WriteJSON(w, http.StatusNotFound, middleware.APIError{Error: "producto no encontrado"})
 		return
 	}
+
+	priceSettings := loadPriceSettings(h.orderRepo)
+	product.FinalPrice = computeFinalPrice(product.Price, priceSettings)
 
 	middleware.WriteJSON(w, http.StatusOK, product)
 }
