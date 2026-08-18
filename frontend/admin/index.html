@@ -18,7 +18,7 @@
             <nav class="sidebar-nav">
                 <a href="#dashboard" class="nav-item active" data-section="dashboard">
                     <span class="icon">📊</span>
-                    <span>Dashboard</span>
+                    <span>Panel</span>
                 </a>
                 <a href="#orders" class="nav-item" data-section="orders">
                     <span class="icon">📦</span>
@@ -42,7 +42,7 @@
                 </a>
                 <a href="#logs" class="nav-item" data-section="logs">
                     <span class="icon">📋</span>
-                    <span>Logs</span>
+                    <span>Registros</span>
                 </a>
             </nav>
             <div class="sidebar-footer">
@@ -56,7 +56,7 @@
         <!-- Main Content -->
         <main class="main-content">
             <header class="top-bar">
-                <h2 id="pageTitle">Dashboard</h2>
+                <h2 id="pageTitle">Panel</h2>
                 <div class="user-info">
                     <span id="adminUsername">Admin</span>
                 </div>
@@ -216,26 +216,29 @@
             <span class="close">&times;</span>
             <h2 id="productModalTitle">Agregar Producto</h2>
             <form id="productForm">
-                <div class="form-group">
-                    <label>Nombre</label>
-                    <input type="text" name="name" required>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Nombre</label>
+                        <input type="text" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Precio</label>
+                        <input type="number" name="price" step="0.01" required>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label>Descripción</label>
                     <textarea name="description" required></textarea>
                 </div>
-                <div class="form-group">
-                    <label>Precio</label>
-                    <input type="number" name="price" step="0.01" required>
-                </div>
-                <!-- stock auto-calculado de colores × tallas -->
-                <div class="form-group">
-                    <label>Categoría</label>
-                    <input type="text" name="category" required>
-                </div>
-                <div class="form-group">
-                    <label>Material</label>
-                    <input type="text" name="material" placeholder="Ej: Algodón orgánico">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Categoría</label>
+                        <input type="text" name="category" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Material</label>
+                        <input type="text" name="material" placeholder="Ej: Algodón orgánico">
+                    </div>
                 </div>
                 <div class="form-group">
                     <label>Tallas disponibles (separadas por coma)</label>
@@ -258,13 +261,17 @@
                     <label>Colores</label>
                     <div id="color-list" class="color-list"></div>
                     <div class="color-add-row">
-                        <input type="text" id="color-name-input" placeholder="Nombre (ej: Rojo)" class="color-input" style="flex:1">
-                        <input type="color" id="color-hex-input" value="#000000" class="color-input color-hex" style="width:40px">
+                        <input type="text" id="color-name-input" placeholder="Nombre" class="color-input">
+                        <input type="color" id="color-hex-input" value="#000000" class="color-input color-hex">
+                        <div id="color-image-upload" class="color-image-upload" title="Imagen del color">
+                            <img id="color-image-preview" class="color-image-preview" style="display:none" alt="">
+                            <div id="color-image-placeholder" class="color-image-placeholder">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                            </div>
+                            <input type="file" id="color-image-file-input" accept="image/jpeg,image/png,image/webp,image/gif" style="display:none">
+                        </div>
+                        <input type="hidden" id="color-image-hidden" value="">
                         <button type="button" class="btn-secondary btn-sm" onclick="addColor()">+</button>
-                    </div>
-                    <div id="color-size-stock-area" class="color-size-stock-area" style="display:none; margin-top:8px">
-                        <label class="size-stock-area-label">Stock por talla:</label>
-                        <div id="color-size-stock-inputs" class="color-size-stock-inputs"></div>
                     </div>
                 </div>
                 <div class="form-actions">
@@ -323,6 +330,6 @@
         </div>
     </div>
 
-    <script src="/admin/js/admin.js?v=3"></script>
+    <script src="/admin/js/admin.js?v=4"></script>
 </body>
 </html>

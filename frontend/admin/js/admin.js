@@ -76,7 +76,8 @@ function setupImageUpload() {
             } else {
                 const err = await response.json();
                 alert(err.error || 'Error al subir imagen');
-                resetImageUpload();
+    resetImageUpload();
+    resetColorImageUpload();
             }
         } catch (error) {
             console.error('Error uploading image:', error);
@@ -117,39 +118,91 @@ function setImageUploadPreview(url) {
 function onGlobalSizesChange() {
     const input = document.getElementById('product-sizes-input');
     globalSizes = (input.value || '').split(',').map(s => s.trim()).filter(Boolean);
-    const area = document.getElementById('color-size-stock-area');
-    const inputs = document.getElementById('color-size-stock-inputs');
-    if (globalSizes.length > 0) {
-        area.style.display = 'block';
-        inputs.innerHTML = globalSizes.map(s => `
-            <label class="size-stock-inline">
-                ${s}:
-                <input type="number" class="size-stock-input" data-size="${s}" value="0" min="0">
-            </label>
-        `).join('');
-    } else {
-        area.style.display = 'none';
+}
+
+function setupColorImageUpload() {
+    const area = document.getElementById('color-image-upload');
+    const input = document.getElementById('color-image-file-input');
+    const preview = document.getElementById('color-image-preview');
+    const placeholder = document.getElementById('color-image-placeholder');
+    const hidden = document.getElementById('color-image-hidden');
+    if (!area) return;
+
+    area.addEventListener('click', () => input.click());
+
+    input.addEventListener('change', () => {
+        if (input.files.length) handleFile(input.files[0]);
+    });
+
+    async function handleFile(file) {
+        if (!file.type.match(/^image\/(jpeg|png|webp|gif)$/)) {
+            alert('Formato no permitido. Usa JPG, PNG, WebP o GIF.');
+            return;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            alert('El archivo es demasiado grande. Máximo 5MB.');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            preview.src = e.target.result;
+            preview.style.display = 'block';
+            placeholder.style.display = 'none';
+            area.classList.add('has-image');
+        };
+        reader.readAsDataURL(file);
+
+        const formData = new FormData();
+        formData.append('image', file);
+
+        try {
+            area.style.opacity = '0.5';
+            const response = await csrfFetch(`${API_BASE}/admin/upload`, { method: 'POST', body: formData });
+            if (response.ok) {
+                const data = await response.json();
+                hidden.value = data.filename;
+            } else {
+                const err = await response.json();
+                alert(err.error || 'Error al subir imagen');
+                resetColorImageUpload();
+            }
+        } catch (error) {
+            console.error('Error uploading color image:', error);
+            alert('Error al subir imagen');
+            resetColorImageUpload();
+        } finally {
+            area.style.opacity = '1';
+        }
     }
+}
+
+function resetColorImageUpload() {
+    const preview = document.getElementById('color-image-preview');
+    const placeholder = document.getElementById('color-image-placeholder');
+    const area = document.getElementById('color-image-upload');
+    const hidden = document.getElementById('color-image-hidden');
+    const input = document.getElementById('color-image-file-input');
+    if (preview) preview.style.display = 'none';
+    if (placeholder) placeholder.style.display = 'flex';
+    if (area) area.classList.remove('has-image');
+    if (hidden) hidden.value = '';
+    if (input) input.value = '';
 }
 
 function addColor() {
     const nameInput = document.getElementById('color-name-input');
     const hexInput = document.getElementById('color-hex-input');
+    const hidden = document.getElementById('color-image-hidden');
     const name = nameInput.value.trim();
     const hex = hexInput.value.trim();
+    const imageUrl = hidden ? hidden.value : '';
     if (!name || !hex) return;
 
-    const sizes = globalSizes.map(s => {
-        const input = document.querySelector(`#color-size-stock-inputs .size-stock-input[data-size="${s}"]`);
-        return { size: s, stock: parseInt(input?.value) || 0 };
-    });
-
-    const stock = sizes.reduce((sum, s) => sum + s.stock, 0);
-    productColors.push({ name, hex_code: hex, stock, sizes });
+    productColors.push({ name, hex_code: hex, imageUrl, sizes: [] });
     nameInput.value = '';
     hexInput.value = '';
-
-    document.querySelectorAll('#color-size-stock-inputs .size-stock-input').forEach(inp => inp.value = '0');
+    resetColorImageUpload();
 
     renderColorList();
 }
@@ -159,47 +212,15 @@ function removeColor(index) {
     renderColorList();
 }
 
-function getSizeStock(color, size) {
-    const s = (color.sizes || []).find(s => s.size === size);
-    return s ? s.stock : 0;
-}
-
-function updateSizeStock(colorIndex, size, value) {
-    const c = productColors[colorIndex];
-    if (!c) return;
-    const s = (c.sizes || []).find(s => s.size === size);
-    if (s) {
-        s.stock = parseInt(value) || 0;
-    } else {
-        if (!c.sizes) c.sizes = [];
-        c.sizes.push({ size, stock: parseInt(value) || 0 });
-    }
-    const total = (c.sizes || []).reduce((sum, s) => sum + s.stock, 0);
-    const badge = document.querySelector(`#color-list .color-chip:nth-child(${colorIndex + 1}) .color-stock-badge`);
-    if (badge) badge.textContent = 'Stock: ' + total;
-}
-
 function renderColorList() {
     const container = document.getElementById('color-list');
     container.innerHTML = productColors.map((c, i) => {
-        const sizes = c.sizes || [];
-        const totalStock = sizes.reduce((sum, s) => sum + s.stock, 0);
+        const thumb = c.imageUrl ? `<img src="${imgUrl(c.imageUrl)}" class="color-thumb" alt="">` : '';
         return `
         <div class="color-chip">
             <span class="color-swatch" style="background:${c.hex_code}"></span>
             <span class="color-chip-name">${c.name}</span>
-            <span class="color-stock-badge">Stock: ${totalStock}</span>
-            <span class="color-size-stocks">
-                ${globalSizes.map(s => {
-                    const sz = sizes.find(x => x.size === s);
-                    return `
-                    <label class="size-stock-inline">
-                        ${s}:
-                        <input type="number" class="size-stock-input" value="${sz ? sz.stock : 0}" min="0"
-                            onchange="updateSizeStock(${i}, '${s}', this.value)">
-                    </label>`;
-                }).join('')}
-            </span>
+            ${thumb}
             <button type="button" class="color-remove" onclick="removeColor(${i})">&times;</button>
         </div>`;
     }).join('');
@@ -234,7 +255,7 @@ function showProductModal(product = null) {
         form.material.value = product.material || '';
         form.sizes.value = (product.sizes || []).join(', ');
         onGlobalSizesChange();
-        productColors = (product.colors || []).map(c => ({ name: c.name, hex_code: c.hex, stock: c.stock || 0, sizes: c.sizes || [] }));
+        productColors = (product.colors || []).map(c => ({ name: c.name, hex_code: c.hex, imageUrl: c.imageUrl || '', sizes: c.sizes || [] }));
         renderColorList();
     } else {
         title.textContent = 'Nuevo Producto';
@@ -256,16 +277,13 @@ document.getElementById('productForm')?.addEventListener('submit', async (e) => 
     e.preventDefault();
     const form = e.target;
     const colors = productColors.map(c => {
-        const sizes = c.sizes || [];
-        const stock = sizes.reduce((sum, s) => sum + s.stock, 0);
-        return { name: c.name, hex: c.hex_code, stock, sizes };
+        return { name: c.name, hex: c.hex_code, stock: -1, imageUrl: c.imageUrl || '', sizes: [] };
     });
-    const totalStock = colors.reduce((sum, c) => sum + c.stock, 0);
     const payload = {
         name: form.name.value,
         description: form.description.value,
         price: parseFloat(form.price.value) || 0,
-        stock: totalStock,
+        stock: -1,
         category: form.category.value,
         imageUrl: document.getElementById('image_url_hidden').value,
         material: form.material.value,
@@ -329,11 +347,35 @@ function renderPaymentMethods(methods) {
     }
     container.innerHTML = methods.map(m => `
         <div class="payment-card">
-            <h3>${m.name}</h3>
+            <div class="payment-card-header">
+                <h3>${paymentMethodText(m.name)}</h3>
+                <button class="btn-secondary btn-sm" onclick="togglePaymentMethod(${m.id}, ${m.enabled})">
+                    ${m.enabled ? 'Desactivar' : 'Activar'}
+                </button>
+            </div>
             <p>${m.description || ''}</p>
             <span class="status-badge ${m.enabled ? 'paid' : 'disabled'}">${m.enabled ? 'Activo' : 'Inactivo'}</span>
         </div>
     `).join('');
+}
+
+async function togglePaymentMethod(id, currentEnabled) {
+    const enabled = !currentEnabled;
+    try {
+        const response = await csrfFetch(`${API_BASE}/admin/payment-methods/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ enabled })
+        });
+        if (response.ok) {
+            loadPaymentMethods();
+        } else {
+            alert('Error al actualizar el método de pago');
+        }
+    } catch (error) {
+        console.error('Error toggling payment method:', error);
+        alert('Error al actualizar el método de pago');
+    }
 }
 
 let allUsers = [];
@@ -393,18 +435,60 @@ async function loadSettings() {
     }
 }
 
+const SETTING_LABELS = {
+    iva: 'IVA (%)',
+    comision: 'Comisión ($)',
+    envio: 'Envío ($)',
+    site_name: 'Nombre del sitio',
+    site_description: 'Descripción',
+    contact_phone: 'Teléfono de contacto',
+    contact_email: 'Correo de contacto',
+    free_shipping_min: 'Envío gratis desde ($)',
+};
+
+const PRICING_KEYS = ['iva', 'comision', 'envio'];
+
 function renderSettings(settings) {
     const container = document.getElementById('settingsForm');
     if (settings.length === 0) {
         container.innerHTML = '<p class="loading">No hay configuraciones</p>';
         return;
     }
-    const html = settings.map(setting => `
-        <div class="form-group">
-            <label>${setting.key}</label>
-            <input type="text" value="${setting.value}" onchange="updateSetting('${setting.key}', this.value)">
-        </div>
-    `).join('');
+
+    const pricing = settings.filter(s => PRICING_KEYS.includes(s.key));
+    const other = settings.filter(s => !PRICING_KEYS.includes(s.key));
+
+    let html = '';
+
+    if (pricing.length > 0) {
+        html += `<div class="settings-group"><h4>Precios y Recargos</h4><div class="settings-grid">`;
+        pricing.forEach(s => {
+            const label = SETTING_LABELS[s.key] || s.key;
+            const suffix = s.key === 'iva' ? '%' : '$';
+            html += `
+                <div class="form-group" style="position:relative">
+                    <label>${label}</label>
+                    <input type="number" value="${s.value}" step="0.01"
+                           onchange="updateSetting('${s.key}', this.value)">
+                    <span class="input-suffix">${suffix}</span>
+                </div>`;
+        });
+        html += `</div></div>`;
+    }
+
+    if (other.length > 0) {
+        html += `<div class="settings-group"><h4>General</h4>`;
+        other.forEach(s => {
+            const label = SETTING_LABELS[s.key] || s.key;
+            html += `
+                <div class="form-group">
+                    <label>${label}</label>
+                    <input type="text" value="${s.value}" onchange="updateSetting('${s.key}', this.value)">
+                </div>`;
+        });
+        html += `</div>`;
+    }
+
     container.innerHTML = html;
 }
 
@@ -479,6 +563,35 @@ function formatDate(dateString) {
     }).format(date);
 }
 
+function statusText(status) {
+    const map = {
+        pending: 'Pendiente',
+        processing: 'Procesando',
+        completed: 'Completado',
+        cancelled: 'Cancelado',
+        paid: 'Pagado'
+    };
+    return map[status] || status;
+}
+
+function paymentStatusText(status) {
+    const map = {
+        pending: 'Pago Pendiente',
+        paid: 'Pagado',
+        failed: 'Fallido'
+    };
+    return map[status] || status;
+}
+
+function paymentMethodText(method) {
+    const map = {
+        cash_on_delivery: 'Contra Entrega',
+        transfer: 'Transferencia',
+        card: 'Tarjeta'
+    };
+    return map[method] || method;
+}
+
 async function loadDashboard() {
     try {
         const resp = await csrfFetch(`${API_BASE}/admin/dashboard/stats`);
@@ -503,8 +616,8 @@ function renderDashboardStats(stats) {
                 <tr>
                     <td>#${o.id}</td>
                     <td>${formatCurrency(o.total)}</td>
-                    <td><span class="status-badge ${o.status}">${o.status}</span></td>
-                    <td><span class="status-badge ${o.paymentStatus}">${o.paymentStatus || 'pending'}</span></td>
+                    <td><span class="status-badge ${o.status}">${statusText(o.status)}</span></td>
+                    <td><span class="status-badge ${o.paymentStatus}">${paymentStatusText(o.paymentStatus || 'pending')}</span></td>
                     <td>${formatDate(o.createdAt)}</td>
                 </tr>
             `).join('')}
@@ -565,9 +678,9 @@ function renderOrders(orders) {
                         <td>#${o.id}</td>
                         <td>Usuario #${o.userId}</td>
                         <td>${formatCurrency(o.total)}</td>
-                        <td><span class="status-badge ${o.status}">${o.status}</span></td>
-                        <td><span class="status-badge ${o.paymentStatus}">${o.paymentStatus}</span></td>
-                        <td>${o.paymentMethod}</td>
+                        <td><span class="status-badge ${o.status}">${statusText(o.status)}</span></td>
+                        <td><span class="status-badge ${o.paymentStatus}">${paymentStatusText(o.paymentStatus)}</span></td>
+                        <td>${paymentMethodText(o.paymentMethod)}</td>
                         <td>${formatDate(o.createdAt)}</td>
                         <td><button class="btn-success btn-sm" onclick="viewOrder(${o.id})">Ver</button></td>
                     </tr>
@@ -590,7 +703,6 @@ async function viewOrder(orderId) {
 
 function renderOrderDetails(order) {
     const container = document.getElementById('orderDetails');
-    const methodNames = { cash_on_delivery: 'Contra Entrega', transfer: 'Transferencia', card: 'Tarjeta' };
     container.innerHTML = `
         <div class="order-details">
             <h3>Información de Envío</h3>
@@ -598,13 +710,17 @@ function renderOrderDetails(order) {
             <p><strong>Dirección:</strong> ${order.shippingAddress}</p>
             <p><strong>Ciudad:</strong> ${order.shippingCity}</p>
             <p><strong>Teléfono:</strong> ${order.shippingPhone}</p>
-            <p><strong>Método de Pago:</strong> ${methodNames[order.paymentMethod] || order.paymentMethod || '—'}</p>
+            <p><strong>Método de Pago:</strong> ${paymentMethodText(order.paymentMethod)}</p>
             <p><strong>Fecha:</strong> ${order.createdAt ? new Date(order.createdAt).toLocaleString() : '—'}</p>
             <h3>Productos</h3>
             ${(order.items || []).map(item => `
-                <div class="order-item">
-                    <p><strong>${item.productName}</strong>${item.colorName ? ` (${item.colorName})` : ''}${item.size ? ` [${item.size}]` : ''} × ${item.quantity}</p>
-                    <p>Precio: ${formatCurrency(item.productPrice)}</p>
+                <div class="order-item order-item-row">
+                    ${(() => { const img = item.colorImageUrl || item.imageUrl; return img ? `<img src="${imgUrl(img)}" class="order-item-img" alt="">` : ''; })()}
+                    <div class="order-item-info">
+                        <p><strong>${item.productName}</strong></p>
+                        ${item.colorName ? `<p>${item.colorName}</p>` : ''}
+                        <p>Cantidad: ${item.quantity || 1}</p>
+                    </div>
                 </div>
             `).join('')}
             <h3>Total: ${formatCurrency(order.total)}</h3>
@@ -659,6 +775,7 @@ document.addEventListener('DOMContentLoaded', () => {
         modal.querySelector('.close').onclick = () => modal.classList.remove('active');
     }
     setupImageUpload();
+    setupColorImageUpload();
 });
 
 function imgUrl(url) {
@@ -684,12 +801,12 @@ function renderProducts(products) {
         return;
     }
     container.innerHTML = products.map(p => `
-        <div class="product-card ${p.stock === 0 ? 'out-of-stock' : ''}">
+        <div class="product-card">
             <img src="${imgUrl(p.imageUrl)}" alt="${p.name}" class="product-image" loading="lazy">
             <div class="product-info">
                 <div class="product-name">${p.name}</div>
                 <div class="product-price">${formatCurrency(p.price)}</div>
-                <div class="product-stock">${p.stock === 0 ? '⚠ AGOTADO' : 'Stock: ' + p.stock} · ${p.category}</div>
+                <div class="product-stock">${p.category}</div>
                 <div class="product-actions">
                     <button class="btn-success btn-sm" onclick="editProduct(${p.id})">Editar</button>
                     <button class="btn-danger btn-sm" onclick="deleteProduct(${p.id})">Eliminar</button>

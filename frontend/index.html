@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <style id="splash-scroll-lock">html,body{overflow:hidden!important;height:100%!important;margin:0}</style>
     <link rel="icon" type="image/svg+xml" href="assets/latrode-icon-white.svg" />
-    <link rel="stylesheet" href="css/styles.css?v=12" />
+    <link rel="stylesheet" href="css/styles.css?v=17" />
     <title>latrode</title>
   </head>
 
@@ -386,6 +386,10 @@
             <svg viewBox="0 0 24 24" class="menu-icon"><use href="assets/icons/list.svg#icon"/></svg>
             <span>Mis Pedidos</span>
             </button>
+            <button class="menu-item" id="profile-checkout-btn">
+            <svg viewBox="0 0 24 24" class="menu-icon"><use href="assets/icons/cart.svg#icon"/></svg>
+            <span>Finalizar Compra</span>
+            </button>
             <button class="menu-item" id="profile-favorites-btn">
             <svg viewBox="0 0 24 24" class="menu-icon"><use href="assets/icons/favorite.svg#icon"/></svg>
             <span>Favoritos</span>
@@ -545,10 +549,6 @@
               <button class="filter-suboption" data-value="name-asc">A-Z</button>
               <button class="filter-suboption" data-value="name-desc">Z-A</button>
             </div>
-            <label class="filter-toggle">
-              <input type="checkbox" id="filter-instock">
-              <span class="filter-toggle-label">Solo disponibles</span>
-            </label>
             <button class="filter-apply-btn" id="apply-filters-btn">Aplicar Filtros</button>
             <button class="filter-reset-btn" id="reset-filters-btn">Limpiar filtros</button>
           </div>
@@ -586,13 +586,9 @@
           <div class="modal-quantity-selector">
             <label>Cantidad:</label>
             <div class="quantity-controls">
-              <button class="modal-qty-btn minus" aria-label="Disminuir cantidad">
-                <svg viewBox="0 0 24 24" width="24" height="24"><use href="assets/icons/minus.svg#icon"/></svg>
-              </button>
+              <button class="modal-qty-btn" data-action="minus"><svg viewBox="0 0 24 24" width="20" height="20"><use href="assets/icons/minus.svg#icon"/></svg></button>
               <span class="modal-quantity">1</span>
-              <button class="modal-qty-btn plus" aria-label="Aumentar cantidad">
-                <svg viewBox="0 0 24 24" width="24" height="24"><use href="assets/icons/plus.svg#icon"/></svg>
-              </button>
+              <button class="modal-qty-btn" data-action="plus"><svg viewBox="0 0 24 24" width="20" height="20"><use href="assets/icons/plus.svg#icon"/></svg></button>
             </div>
           </div>
 
@@ -800,6 +796,6 @@
     </div>
 
     <script src="js/api.js?v=7"></script>
-    <script src="js/app.js?v=15"></script>
+    <script src="js/app.js?v=20"></script>
   </body>
 </html>

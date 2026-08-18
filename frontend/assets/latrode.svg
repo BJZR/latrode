@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 256 256"
+     width="256"
+     height="256">
+
+
+
+    <!-- Triángulo grande -->
+    <path
+        d="M32 64 L128 224 L224 64 Z"
+        fill="none"
+        stroke="black"
+        stroke-width="8"
+        stroke-linejoin="round"/>
+
+    <!-- Triángulo pequeño (dibujado encima para tapar la línea) -->
+    <path
+        d="M64 48 L128 160 L192 48 Z"
+        fill="none"
+        stroke="black"
+        stroke-width="8"
+        stroke-linejoin="round"/>
+
+    </svg>

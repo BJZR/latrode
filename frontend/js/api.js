@@ -84,10 +84,10 @@ class API {
         return this.request('/cart');
     }
 
-    static async addToCart(productId, colorId, quantity = 1, size = '') {
+    static async addToCart(productId, colorId, size = '', quantity = 1) {
         return this.request('/cart', {
             method: 'POST',
-            body: JSON.stringify({ productId, colorId, quantity, size })
+            body: JSON.stringify({ productId, colorId, size, quantity })
         });
     }
 

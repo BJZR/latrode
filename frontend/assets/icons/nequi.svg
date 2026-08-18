@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 120 120"
+     width="256"
+     height="256">
+
+  <!-- Cuadrado superior izquierdo -->
+  <rect x="8" y="8"
+        width="18"
+        height="18"
+        rx="2"/>
+
+  <!-- N -->
+  <path d="
+        M30 25
+        L30 95
+        L46 95
+        L46 50
+        L74 95
+        L90 95
+        L90 25
+        L74 25
+        L74 70
+        L46 25
+        Z"/>
+  </svg>
