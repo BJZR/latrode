@@ -99,16 +99,17 @@ type Order struct {
 }
 
 type OrderItem struct {
-	ID           int     `json:"id"`
-	OrderID      int     `json:"orderId"`
-	ProductID    *int    `json:"productId"`
-	ProductName  string  `json:"productName"`
-	ProductPrice float64 `json:"productPrice"`
-	ImageUrl     string  `json:"imageUrl"`
-	ColorName    string  `json:"colorName"`
-	Size         string  `json:"size"`
-	Quantity     int     `json:"quantity"`
-	Subtotal     float64 `json:"subtotal"`
+	ID            int     `json:"id"`
+	OrderID       int     `json:"orderId"`
+	ProductID     *int    `json:"productId"`
+	ProductName   string  `json:"productName"`
+	ProductPrice  float64 `json:"productPrice"`
+	ImageUrl      string  `json:"imageUrl"`
+	ColorImageUrl string  `json:"colorImageUrl"`
+	ColorName     string  `json:"colorName"`
+	Size          string  `json:"size"`
+	Quantity      int     `json:"quantity"`
+	Subtotal      float64 `json:"subtotal"`
 }
 
 type PaymentMethod struct {

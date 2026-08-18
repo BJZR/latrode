@@ -218,6 +218,10 @@ func (r *ProductRepo) Create(req *models.CreateProductRequest) (*models.Product,
 
 	var totalStock int
 	for _, c := range colors {
+		if c.Stock == -1 {
+			totalStock = -1
+			break
+		}
 		totalStock += c.Stock
 	}
 	r.db.DB.Exec(`UPDATE products SET stock=$1 WHERE id=$2`, totalStock, p.ID)
@@ -239,6 +243,10 @@ func (r *ProductRepo) saveColors(productID int, cols []models.ColorInput) ([]mod
 
 		var totalSizeStock int
 		for _, s := range color.Sizes {
+			if s.Stock == -1 {
+				totalSizeStock = -1
+				break
+			}
 			totalSizeStock += s.Stock
 		}
 		if len(color.Sizes) > 0 {
@@ -288,6 +296,10 @@ func (r *ProductRepo) Update(id int, req *models.CreateProductRequest) (*models.
 
 	var totalStock int
 	for _, c := range colors {
+		if c.Stock == -1 {
+			totalStock = -1
+			break
+		}
 		totalStock += c.Stock
 	}
 	r.db.DB.Exec(`UPDATE products SET stock=$1 WHERE id=$2`, totalStock, id)

@@ -38,7 +38,7 @@ func (r *OrderRepo) FindByUserID(userID int) ([]models.Order, error) {
 		`SELECT o.id, o.user_id, o.total, o.status, o.payment_status, o.payment_method,
 		 o.shipping_name, o.shipping_phone, o.shipping_address, o.shipping_city, o.shipping_postal_code, o.shipping_country,
 		 COALESCE(o.wompi_transaction_id,''), COALESCE(o.wompi_status,''), COALESCE(o.wompi_reference,''), o.created_at,
-		 oi.id, oi.order_id, oi.product_id, oi.product_name, oi.product_price, oi.color_name, oi.size, oi.quantity, oi.subtotal,
+		 oi.id, oi.order_id, oi.product_id, oi.product_name, oi.product_price, oi.color_name, COALESCE(oi.color_image_url,''), oi.size, oi.quantity, oi.subtotal,
 		 COALESCE(p.image_url,'')
 		 FROM orders o
 		 LEFT JOIN order_items oi ON oi.order_id = o.id
@@ -56,14 +56,14 @@ func (r *OrderRepo) FindByUserID(userID int) ([]models.Order, error) {
 	for rows.Next() {
 		var o models.Order
 		var oiID, oiOrderID, oiProductID sql.NullInt64
-		var oiProductName, oiColorName, oiSize, oiImageUrl sql.NullString
+		var oiProductName, oiColorName, oiColorImageUrl, oiSize, oiImageUrl sql.NullString
 		var oiProductPrice, oiSubtotal sql.NullFloat64
 		var oiQuantity sql.NullInt64
 
 		err := rows.Scan(&o.ID, &o.UserID, &o.Total, &o.Status, &o.PaymentStatus, &o.PaymentMethod,
 			&o.ShippingName, &o.ShippingPhone, &o.ShippingAddress, &o.ShippingCity, &o.ShippingPostalCode, &o.ShippingCountry,
 			&o.WompiTransactionID, &o.WompiStatus, &o.WompiReference, &o.CreatedAt,
-			&oiID, &oiOrderID, &oiProductID, &oiProductName, &oiProductPrice, &oiColorName, &oiSize, &oiQuantity, &oiSubtotal, &oiImageUrl)
+			&oiID, &oiOrderID, &oiProductID, &oiProductName, &oiProductPrice, &oiColorName, &oiColorImageUrl, &oiSize, &oiQuantity, &oiSubtotal, &oiImageUrl)
 		if err != nil {
 			return nil, err
 		}
@@ -71,15 +71,16 @@ func (r *OrderRepo) FindByUserID(userID int) ([]models.Order, error) {
 		if existing, ok := orderMap[o.ID]; ok {
 			if oiID.Valid {
 				item := models.OrderItem{
-					ID:           int(oiID.Int64),
-					OrderID:      int(oiOrderID.Int64),
-					ColorName:    oiColorName.String,
-					Size:         oiSize.String,
-					Quantity:     int(oiQuantity.Int64),
-					Subtotal:     oiSubtotal.Float64,
-					ProductName:  oiProductName.String,
-					ProductPrice: oiProductPrice.Float64,
-					ImageUrl:     oiImageUrl.String,
+					ID:            int(oiID.Int64),
+					OrderID:       int(oiOrderID.Int64),
+					ColorName:     oiColorName.String,
+					ColorImageUrl: oiColorImageUrl.String,
+					Size:          oiSize.String,
+					Quantity:      int(oiQuantity.Int64),
+					Subtotal:      oiSubtotal.Float64,
+					ProductName:   oiProductName.String,
+					ProductPrice:  oiProductPrice.Float64,
+					ImageUrl:      oiImageUrl.String,
 				}
 				if oiProductID.Valid {
 					pid := int(oiProductID.Int64)
@@ -91,15 +92,16 @@ func (r *OrderRepo) FindByUserID(userID int) ([]models.Order, error) {
 			o.Items = []models.OrderItem{}
 			if oiID.Valid {
 				item := models.OrderItem{
-					ID:           int(oiID.Int64),
-					OrderID:      int(oiOrderID.Int64),
-					ColorName:    oiColorName.String,
-					Size:         oiSize.String,
-					Quantity:     int(oiQuantity.Int64),
-					Subtotal:     oiSubtotal.Float64,
-					ProductName:  oiProductName.String,
-					ProductPrice: oiProductPrice.Float64,
-					ImageUrl:     oiImageUrl.String,
+					ID:            int(oiID.Int64),
+					OrderID:       int(oiOrderID.Int64),
+					ColorName:     oiColorName.String,
+					ColorImageUrl: oiColorImageUrl.String,
+					Size:          oiSize.String,
+					Quantity:      int(oiQuantity.Int64),
+					Subtotal:      oiSubtotal.Float64,
+					ProductName:   oiProductName.String,
+					ProductPrice:  oiProductPrice.Float64,
+					ImageUrl:      oiImageUrl.String,
 				}
 				if oiProductID.Valid {
 					pid := int(oiProductID.Int64)
@@ -157,8 +159,8 @@ func (r *OrderRepo) Create(userID int, req *models.CreateOrderRequest,
 			}
 			if ci.Size != "" {
 				var invStock int
-				tx.QueryRow(`SELECT stock FROM inventory WHERE color_id=$1 AND size=$2 FOR UPDATE`, *ci.ColorID, ci.Size).Scan(&invStock)
-				if invStock != -1 && invStock < 1 {
+				err := tx.QueryRow(`SELECT stock FROM inventory WHERE color_id=$1 AND size=$2 FOR UPDATE`, *ci.ColorID, ci.Size).Scan(&invStock)
+				if err == nil && invStock != -1 && invStock < 1 {
 					return nil, ErrInsufficientStock
 				}
 			}
@@ -171,7 +173,7 @@ func (r *OrderRepo) Create(userID int, req *models.CreateOrderRequest,
 	}
 	orderStatus := "pending"
 	if pm == "cash_on_delivery" {
-		orderStatus = "paid"
+		orderStatus = "processing"
 	}
 	o, err := scanOrder(tx.QueryRow(
 		`INSERT INTO orders (user_id, total, status, payment_method,
@@ -205,6 +207,10 @@ func (r *OrderRepo) Create(userID int, req *models.CreateOrderRequest,
 		if ci.Color != nil {
 			colorName = ci.Color.Name
 		}
+		colorImageURL := ""
+		if ci.Color != nil {
+			colorImageURL = ci.Color.ImageURL
+		}
 		var productID *int
 		if ci.Product != nil {
 			productID = &ci.Product.ID
@@ -212,12 +218,12 @@ func (r *OrderRepo) Create(userID int, req *models.CreateOrderRequest,
 
 		item := &models.OrderItem{}
 		err := tx.QueryRow(
-			`INSERT INTO order_items (order_id, product_id, product_name, product_price, color_name, size, quantity, subtotal)
-			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-			 RETURNING id, order_id, product_id, product_name, product_price, color_name, size, quantity, subtotal`,
-			o.ID, productID, productName, productPrice, colorName, ci.Size, qty, subtotal,
+			`INSERT INTO order_items (order_id, product_id, product_name, product_price, color_name, color_image_url, size, quantity, subtotal)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+			 RETURNING id, order_id, product_id, product_name, product_price, color_name, color_image_url, size, quantity, subtotal`,
+			o.ID, productID, productName, productPrice, colorName, colorImageURL, ci.Size, qty, subtotal,
 		).Scan(&item.ID, &item.OrderID, &item.ProductID, &item.ProductName, &item.ProductPrice,
-			&item.ColorName, &item.Size, &item.Quantity, &item.Subtotal)
+			&item.ColorName, &item.ColorImageUrl, &item.Size, &item.Quantity, &item.Subtotal)
 		if err != nil {
 			return nil, fmt.Errorf("error insertando item: %w", err)
 		}
@@ -356,7 +362,7 @@ func (r *OrderRepo) GetDashboardStats() (*models.DashboardStats, error) {
 
 func (r *OrderRepo) findItems(orderID int) []models.OrderItem {
 	rows, err := r.db.DB.Query(
-		`SELECT oi.id, oi.order_id, oi.product_id, oi.product_name, oi.product_price, oi.color_name, oi.size, oi.quantity, oi.subtotal,
+		`SELECT oi.id, oi.order_id, oi.product_id, oi.product_name, oi.product_price, oi.color_name, COALESCE(oi.color_image_url,''), oi.size, oi.quantity, oi.subtotal,
 		 COALESCE(p.image_url,'')
 		 FROM order_items oi
 		 LEFT JOIN products p ON p.id = oi.product_id
@@ -370,7 +376,7 @@ func (r *OrderRepo) findItems(orderID int) []models.OrderItem {
 	for rows.Next() {
 		var item models.OrderItem
 		if err := rows.Scan(&item.ID, &item.OrderID, &item.ProductID, &item.ProductName,
-			&item.ProductPrice, &item.ColorName, &item.Size, &item.Quantity, &item.Subtotal, &item.ImageUrl); err != nil {
+			&item.ProductPrice, &item.ColorName, &item.ColorImageUrl, &item.Size, &item.Quantity, &item.Subtotal, &item.ImageUrl); err != nil {
 			continue
 		}
 		items = append(items, item)
@@ -560,7 +566,6 @@ func (r *OrderRepo) CancelOrder(orderID, userID int) error {
 		}
 	}
 
-	tx.Exec(`DELETE FROM order_items WHERE order_id=$1`, orderID)
 	tx.Exec(`UPDATE orders SET status='cancelled' WHERE id=$1`, orderID)
 
 	return tx.Commit()
