@@ -11,8 +11,8 @@ CREATE TABLE IF NOT EXISTS email_queue (
     sent_at TIMESTAMP WITH TIME ZONE
 );
 
-CREATE INDEX idx_email_queue_status ON email_queue(status);
-CREATE INDEX idx_email_queue_created_at ON email_queue(created_at);
+CREATE INDEX IF NOT EXISTS idx_email_queue_status ON email_queue(status);
+CREATE INDEX IF NOT EXISTS idx_email_queue_created_at ON email_queue(created_at);
 
 CREATE TABLE IF NOT EXISTS email_daily_count (
     id SERIAL PRIMARY KEY,
