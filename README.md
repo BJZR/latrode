@@ -1,4 +1,4 @@
-# Latrode Fusion
+# Latrode
 
 Tienda en línea de ropa para Colombia, con panel administrativo completo, pasarela de pagos (Wompi), autenticación (email/password + Google OAuth), y notificaciones por email y Telegram.
 
