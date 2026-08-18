@@ -18,7 +18,7 @@ Tienda en línea de ropa para Colombia, con panel administrativo completo, pasar
 
 ```bash
 git clone <url-del-repositorio>
-cd latrode-fusion
+cd latrode
 ```
 
 ### 2. Configurar la base de datos
