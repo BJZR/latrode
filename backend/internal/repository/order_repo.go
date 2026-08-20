@@ -577,3 +577,52 @@ func buildQuery(base string, conditions []string, args []interface{}) (string, [
 	}
 	return base, args
 }
+
+func (r *OrderRepo) AdminDeleteOrder(orderID int) error {
+	tx, err := r.db.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	tx.Exec(`DELETE FROM order_items WHERE order_id=$1`, orderID)
+	tx.Exec(`DELETE FROM orders WHERE id=$1`, orderID)
+
+	return tx.Commit()
+}
+
+func (r *OrderRepo) AdminDeleteOrders(ids []int) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	tx, err := r.db.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	placeholders := make([]string, len(ids))
+	args := make([]interface{}, len(ids))
+	for i, id := range ids {
+		placeholders[i] = fmt.Sprintf("$%d", i+1)
+		args[i] = id
+	}
+	ph := strings.Join(placeholders, ",")
+	tx.Exec(fmt.Sprintf(`DELETE FROM order_items WHERE order_id IN (%s)`, ph), args...)
+	tx.Exec(fmt.Sprintf(`DELETE FROM orders WHERE id IN (%s)`, ph), args...)
+
+	return tx.Commit()
+}
+
+func (r *OrderRepo) AdminDeleteAllOrders() error {
+	tx, err := r.db.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	tx.Exec(`DELETE FROM order_items`)
+	tx.Exec(`DELETE FROM orders`)
+
+	return tx.Commit()
+}

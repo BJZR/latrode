@@ -2,6 +2,8 @@ package repository
 
 import (
 	"database/sql"
+	"fmt"
+	"strings"
 	"time"
 
 	"latrode-fusion/internal/database"
@@ -147,6 +149,36 @@ func (r *UserRepo) FindAll() ([]models.User, error) {
 		users = append(users, *u)
 	}
 	return users, nil
+}
+
+func (r *UserRepo) AdminUpdateUser(id int, username, email, role, phone, address, city, postalCode, country, documentType, documentNumber string) error {
+	_, err := r.db.DB.Exec(
+		`UPDATE users SET username=$2, email=$3, role=$4, phone=$5, address=$6, city=$7,
+		 postal_code=$8, country=$9, document_type=$10, document_number=$11, updated_at=NOW()
+		 WHERE id=$1`,
+		id, username, email, role, phone, address, city, postalCode, country, documentType, documentNumber)
+	return err
+}
+
+func (r *UserRepo) DeleteUser(id int) error {
+	_, err := r.db.DB.Exec(`DELETE FROM users WHERE id=$1`, id)
+	return err
+}
+
+func (r *UserRepo) DeleteUsers(ids []int) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	placeholders := make([]string, len(ids))
+	args := make([]interface{}, len(ids))
+	for i, id := range ids {
+		placeholders[i] = fmt.Sprintf("$%d", i+1)
+		args[i] = id
+	}
+	_, err := r.db.DB.Exec(
+		fmt.Sprintf(`DELETE FROM users WHERE id IN (%s)`, strings.Join(placeholders, ",")),
+		args...)
+	return err
 }
 
 // helper interface for both *sql.Row and *sql.Rows

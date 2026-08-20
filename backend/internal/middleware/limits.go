@@ -23,8 +23,10 @@ func APICache(next http.Handler) http.Handler {
 			switch {
 			case strings.HasSuffix(path, "/products") || strings.Contains(path, "/products/"):
 				w.Header().Set("Cache-Control", "private, max-age=30, stale-while-revalidate=60")
-			case strings.HasSuffix(path, "/payment-methods"), strings.HasSuffix(path, "/settings"):
+			case strings.HasSuffix(path, "/settings"):
 				w.Header().Set("Cache-Control", "private, max-age=120")
+			case strings.HasSuffix(path, "/payment-methods"):
+				w.Header().Set("Cache-Control", "private, max-age=5")
 			}
 		}
 		next.ServeHTTP(w, r)
