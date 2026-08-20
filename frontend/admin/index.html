@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Administrativo - Latrode</title>
     <link rel="stylesheet" href="/css/styles.css">
-    <link rel="stylesheet" href="/admin/css/admin.css">
+    <link rel="stylesheet" href="/admin/css/admin.css?v=9">
     <link rel="icon" type="image/svg+xml" href="/assets/latrode-icon-white.svg">
 </head>
 <body>
@@ -115,37 +115,67 @@
 
                 <!-- Orders Section -->
                 <section id="section-orders" class="content-section">
-                    <div class="section-header">
-                        <h3>Gestión de Órdenes</h3>
-                        <div class="filters">
-                            <select id="orderStatusFilter">
-                                <option value="">Todos los estados</option>
-                                <option value="pending">Pendiente</option>
-                                <option value="processing">Procesando</option>
-                                <option value="completed">Completado</option>
-                                <option value="cancelled">Cancelado</option>
-                            </select>
-                            <select id="paymentStatusFilter">
-                                <option value="">Todos los pagos</option>
-                                <option value="pending">Pago Pendiente</option>
-                                <option value="paid">Pagado</option>
-                                <option value="failed">Fallido</option>
-                            </select>
+                    <div class="section-tabs">
+                        <button class="tab-btn active" onclick="switchOrdersTab('list')">Órdenes</button>
+                        <button class="tab-btn tab-trash" onclick="switchOrdersTab('trash')">🗑️ Papelería</button>
+                    </div>
+                    <div id="ordersListView">
+                        <div class="section-header">
+                            <h3>Gestión de Órdenes</h3>
+                            <div class="filters">
+                                <select id="orderStatusFilter">
+                                    <option value="">Todos los estados</option>
+                                    <option value="pending">Pendiente</option>
+                                    <option value="processing">Procesando</option>
+                                    <option value="completed">Completado</option>
+                                    <option value="cancelled">Cancelado</option>
+                                </select>
+                                <select id="paymentStatusFilter">
+                                    <option value="">Todos los pagos</option>
+                                    <option value="pending">Pago Pendiente</option>
+                                    <option value="paid">Pagado</option>
+                                    <option value="failed">Fallido</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id="ordersTable" class="table-container">
+                            <p class="loading">Cargando órdenes...</p>
                         </div>
                     </div>
-                    <div id="ordersTable" class="table-container">
-                        <p class="loading">Cargando órdenes...</p>
+                    <div id="ordersTrashView" style="display:none">
+                        <div class="section-header">
+                            <h3>Papelería de Órdenes</h3>
+                            <button class="btn-danger btn-sm" onclick="emptyOrdersTrash()">Vaciar Papelería</button>
+                        </div>
+                        <div id="ordersTrashTable" class="table-container">
+                            <p class="loading">Cargando papelera...</p>
+                        </div>
                     </div>
                 </section>
 
                 <!-- Products Section -->
                 <section id="section-products" class="content-section">
-                    <div class="section-header">
-                        <h3>Gestión de Productos</h3>
-                        <button id="addProductBtn" class="btn-primary">+ Agregar Producto</button>
+                    <div class="section-tabs">
+                        <button class="tab-btn active" onclick="switchProductsTab('list')">Productos</button>
+                        <button class="tab-btn tab-trash" onclick="switchProductsTab('trash')">🗑️ Papelería</button>
                     </div>
-                    <div id="productsGrid" class="products-grid">
-                        <p class="loading">Cargando productos...</p>
+                    <div id="productsListView">
+                        <div class="section-header">
+                            <h3>Gestión de Productos</h3>
+                            <button id="addProductBtn" class="btn-primary">+ Agregar Producto</button>
+                        </div>
+                        <div id="productsGrid" class="products-grid">
+                            <p class="loading">Cargando productos...</p>
+                        </div>
+                    </div>
+                    <div id="productsTrashView" style="display:none">
+                        <div class="section-header">
+                            <h3>Papelería de Productos</h3>
+                            <button class="btn-danger btn-sm" onclick="emptyProductsTrash()">Vaciar Papelería</button>
+                        </div>
+                        <div id="productsTrashGrid" class="products-grid">
+                            <p class="loading">Cargando papelera...</p>
+                        </div>
                     </div>
                 </section>
 
@@ -161,20 +191,35 @@
 
                 <!-- Users Section -->
                 <section id="section-users" class="content-section">
-                    <div class="section-header">
-                        <h3>Usuarios Registrados</h3>
+                    <div class="section-tabs">
+                        <button class="tab-btn active" onclick="switchUsersTab('list')">Usuarios</button>
+                        <button class="tab-btn tab-trash" onclick="switchUsersTab('trash')">🗑️ Papelería</button>
                     </div>
-                    <div class="users-filter-bar">
-                        <input type="text" id="usersSearchInput" placeholder="Buscar por nombre o email..." class="users-search-input">
-                        <select id="usersRoleFilter" class="users-role-select">
-                            <option value="">Todos los roles</option>
-                            <option value="admin">Admin</option>
-                            <option value="customer">Cliente</option>
-                        </select>
-                        <button class="btn-primary btn-sm" onclick="applyUsersFilter()">Filtrar</button>
+                    <div id="usersListView">
+                        <div class="section-header">
+                            <h3>Usuarios Registrados</h3>
+                        </div>
+                        <div class="users-filter-bar">
+                            <input type="text" id="usersSearchInput" placeholder="Buscar por nombre o email..." class="users-search-input">
+                            <select id="usersRoleFilter" class="users-role-select">
+                                <option value="">Todos los roles</option>
+                                <option value="admin">Admin</option>
+                                <option value="customer">Cliente</option>
+                            </select>
+                            <button class="btn-primary btn-sm" onclick="applyUsersFilter()">Filtrar</button>
+                        </div>
+                        <div id="usersTable" class="table-container">
+                            <p class="loading">Cargando usuarios...</p>
+                        </div>
                     </div>
-                    <div id="usersTable" class="table-container">
-                        <p class="loading">Cargando usuarios...</p>
+                    <div id="usersTrashView" style="display:none">
+                        <div class="section-header">
+                            <h3>Papelería de Usuarios</h3>
+                            <button class="btn-danger btn-sm" onclick="emptyUsersTrash()">Vaciar Papelería</button>
+                        </div>
+                        <div id="usersTrashTable" class="table-container">
+                            <p class="loading">Cargando papelera...</p>
+                        </div>
                     </div>
                 </section>
 
@@ -282,6 +327,71 @@
         </div>
     </div>
 
+    <!-- Modal for User Edit -->
+    <div id="userModal" class="modal">
+        <div class="modal-content modal-md">
+            <span class="close" onclick="closeUserModal()">&times;</span>
+            <h2>Editar Usuario</h2>
+            <form id="userForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Nombre</label>
+                        <input type="text" name="username" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" name="email" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Rol</label>
+                        <select name="role">
+                            <option value="customer">Cliente</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Teléfono</label>
+                        <input type="text" name="phone">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Dirección</label>
+                    <input type="text" name="address">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Ciudad</label>
+                        <input type="text" name="city">
+                    </div>
+                    <div class="form-group">
+                        <label>Código Postal</label>
+                        <input type="text" name="postalCode">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>País</label>
+                        <input type="text" name="country">
+                    </div>
+                    <div class="form-group">
+                        <label>Tipo Documento</label>
+                        <input type="text" name="documentType">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Número de Documento</label>
+                    <input type="text" name="documentNumber">
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Guardar Cambios</button>
+                    <button type="button" class="btn-secondary" onclick="closeUserModal()">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Login Overlay -->
     <div id="loginOverlay" class="admin-login-overlay">
         <div class="admin-login-modal">
@@ -330,6 +440,6 @@
         </div>
     </div>
 
-    <script src="/admin/js/admin.js?v=4"></script>
+    <script src="/admin/js/admin.js?v=12"></script>
 </body>
 </html>
