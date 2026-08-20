@@ -1,0 +1,3 @@
+ALTER TABLE users DROP COLUMN IF EXISTS deleted_at;
+ALTER TABLE orders DROP COLUMN IF EXISTS deleted_at;
+ALTER TABLE products DROP COLUMN IF EXISTS deleted_at;

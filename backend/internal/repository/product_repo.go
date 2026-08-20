@@ -23,7 +23,7 @@ func scanProduct(s scannable) (*models.Product, error) {
 	p := &models.Product{}
 	var sizesStr string
 	err := s.Scan(&p.ID, &p.Name, &p.Description, &p.Price, &p.Stock,
-		&p.Category, &p.ImageURL, &sizesStr, &p.Material, &p.Care, &p.CreatedAt)
+		&p.Category, &p.ImageURL, &sizesStr, &p.Material, &p.Care, &p.CreatedAt, &p.DeletedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -33,10 +33,11 @@ func scanProduct(s scannable) (*models.Product, error) {
 	return p, nil
 }
 
+const productSelectCols = `id, name, description, price, stock, category, image_url, sizes, material, care, created_at, deleted_at`
+
 func (r *ProductRepo) FindAll() ([]models.Product, error) {
 	rows, err := r.db.DB.Query(
-		`SELECT id, name, description, price, stock, category, image_url, sizes, material, care, created_at
-		 FROM products ORDER BY created_at DESC`)
+		`SELECT ` + productSelectCols + ` FROM products WHERE deleted_at IS NULL ORDER BY created_at DESC`)
 	if err != nil {
 		return nil, err
 	}
@@ -63,8 +64,7 @@ func (r *ProductRepo) Count() (int, error) {
 func (r *ProductRepo) FindAllPaginated(page, limit int) ([]models.Product, error) {
 	offset := (page - 1) * limit
 	rows, err := r.db.DB.Query(
-		`SELECT id, name, description, price, stock, category, image_url, sizes, material, care, created_at
-		 FROM products ORDER BY created_at DESC LIMIT $1 OFFSET $2`, limit, offset)
+		`SELECT `+productSelectCols+` FROM products WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT $1 OFFSET $2`, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -87,8 +87,8 @@ func (r *ProductRepo) FindAllPaginated(page, limit int) ([]models.Product, error
 
 func (r *ProductRepo) FindByID(id int) (*models.Product, error) {
 	p, err := scanProduct(r.db.DB.QueryRow(
-		`SELECT id, name, description, price, stock, category, image_url, sizes, material, care, created_at
-		 FROM products WHERE id=$1`, id))
+		`SELECT `+productSelectCols+`
+		 FROM products WHERE id=$1 AND deleted_at IS NULL`, id))
 	if err != nil {
 		return nil, err
 	}
@@ -108,12 +108,14 @@ func (r *ProductRepo) SearchPaginated(query string, page, limit int) ([]models.P
 	return r.SearchFiltered(query, "", "", 0, 0, page, limit)
 }
 
-const productCols = `id, name, description, price, stock, category, image_url, sizes, material, care, created_at`
+const productCols = `id, name, description, price, stock, category, image_url, sizes, material, care, created_at, deleted_at`
 
 func (r *ProductRepo) buildFilter(query, name, category string, minPrice, maxPrice float64) (string, []interface{}) {
 	var conds []string
 	var args []interface{}
 	argIdx := 1
+
+	conds = append(conds, "deleted_at IS NULL")
 
 	if query != "" {
 		tsQuery := "plainto_tsquery('spanish', $" + strconv.Itoa(argIdx) + ")"
@@ -203,7 +205,7 @@ func (r *ProductRepo) Create(req *models.CreateProductRequest) (*models.Product,
 	p, err := scanProduct(r.db.DB.QueryRow(
 		`INSERT INTO products (name, description, price, stock, category, image_url, sizes, material, care)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-		 RETURNING id, name, description, price, stock, category, image_url, sizes, material, care, created_at`,
+		 RETURNING `+productCols,
 		req.Name, req.Description, req.Price, req.Stock, req.Category,
 		req.ImageURL, string(sizesJSON), req.Material, req.Care))
 	if err != nil {
@@ -274,8 +276,8 @@ func (r *ProductRepo) Update(id int, req *models.CreateProductRequest) (*models.
 	p, err := scanProduct(r.db.DB.QueryRow(
 		`UPDATE products SET name=$1, description=$2, price=$3, stock=$4, category=$5,
 		 image_url=$6, sizes=$7, material=$8, care=$9, updated_at=NOW()
-		 WHERE id=$10
-		 RETURNING id, name, description, price, stock, category, image_url, sizes, material, care, created_at`,
+		 WHERE id=$10 AND deleted_at IS NULL
+		 RETURNING `+productCols,
 		req.Name, req.Description, req.Price, req.Stock, req.Category,
 		req.ImageURL, string(sizesJSON), req.Material, req.Care, id))
 	if err != nil {
@@ -309,9 +311,10 @@ func (r *ProductRepo) Update(id int, req *models.CreateProductRequest) (*models.
 
 func (r *ProductRepo) FindTopSelling(limit int) ([]models.Product, error) {
 	rows, err := r.db.DB.Query(
-		`SELECT p.id, p.name, p.description, p.price, p.stock, p.category, p.image_url, p.sizes, p.material, p.care, p.created_at
+		`SELECT p.id, p.name, p.description, p.price, p.stock, p.category, p.image_url, p.sizes, p.material, p.care, p.created_at, p.deleted_at
 		 FROM products p
 		 LEFT JOIN order_items oi ON oi.product_id = p.id
+		 WHERE p.deleted_at IS NULL
 		 GROUP BY p.id
 		 ORDER BY COUNT(oi.id) DESC LIMIT $1`, limit)
 	if err != nil {
@@ -331,9 +334,60 @@ func (r *ProductRepo) FindTopSelling(limit int) ([]models.Product, error) {
 	return products, nil
 }
 
-func (r *ProductRepo) Delete(id int) error {
+func (r *ProductRepo) TrashProduct(id int) error {
+	_, err := r.db.DB.Exec(`UPDATE products SET deleted_at=NOW() WHERE id=$1 AND deleted_at IS NULL`, id)
+	return err
+}
+
+func (r *ProductRepo) FindTrashed() ([]models.Product, error) {
+	rows, err := r.db.DB.Query(
+		`SELECT ` + productCols + ` FROM products WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var products []models.Product
+	for rows.Next() {
+		p, err := scanProduct(rows)
+		if err != nil {
+			return nil, err
+		}
+		products = append(products, *p)
+	}
+	r.loadColorsForProducts(products)
+	return products, nil
+}
+
+func (r *ProductRepo) RestoreProduct(id int) error {
+	_, err := r.db.DB.Exec(`UPDATE products SET deleted_at=NULL WHERE id=$1 AND deleted_at IS NOT NULL`, id)
+	return err
+}
+
+func (r *ProductRepo) PermanentDeleteProduct(id int) error {
+	r.db.DB.Exec(`DELETE FROM inventory WHERE color_id IN (SELECT id FROM product_colors WHERE product_id=$1)`, id)
+	r.db.DB.Exec(`DELETE FROM product_colors WHERE product_id=$1`, id)
 	_, err := r.db.DB.Exec(`DELETE FROM products WHERE id=$1`, id)
 	return err
+}
+
+func (r *ProductRepo) EmptyProductsTrash() error {
+	rows, err := r.db.DB.Query(`SELECT id FROM products WHERE deleted_at IS NOT NULL`)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	var ids []int
+	for rows.Next() {
+		var id int
+		if rows.Scan(&id) == nil {
+			ids = append(ids, id)
+		}
+	}
+	for _, id := range ids {
+		r.PermanentDeleteProduct(id)
+	}
+	return nil
 }
 
 func (r *ProductRepo) findSizeStocks(colorID int) []models.SizeStock {

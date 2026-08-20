@@ -22,7 +22,7 @@ func scanUser(s scannable) (*models.User, error) {
 	u := &models.User{}
 	err := s.Scan(&u.ID, &u.Username, &u.Email, &u.PasswordHash, &u.Role,
 		&u.GoogleID, &u.Phone, &u.Address, &u.City, &u.PostalCode, &u.Country,
-		&u.DocumentType, &u.DocumentNumber, &u.CreatedAt)
+		&u.DocumentType, &u.DocumentNumber, &u.CreatedAt, &u.DeletedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -30,7 +30,7 @@ func scanUser(s scannable) (*models.User, error) {
 	return u, nil
 }
 
-const userCols = `id, username, email, password_hash, role, COALESCE(google_id,''), phone, address, city, postal_code, country, document_type, document_number, created_at`
+const userCols = `id, username, email, password_hash, role, COALESCE(google_id,''), phone, address, city, postal_code, country, document_type, document_number, created_at, deleted_at`
 
 func (r *UserRepo) Create(username, email, passwordHash string) (*models.User, error) {
 	return scanUser(r.db.DB.QueryRow(
@@ -134,7 +134,7 @@ func (r *UserRepo) CleanupExpiredSessions() (int64, error) {
 
 func (r *UserRepo) FindAll() ([]models.User, error) {
 	rows, err := r.db.DB.Query(
-		`SELECT ` + userCols + ` FROM users ORDER BY created_at DESC`)
+		`SELECT ` + userCols + ` FROM users WHERE deleted_at IS NULL ORDER BY created_at DESC`)
 	if err != nil {
 		return nil, err
 	}
@@ -151,21 +151,73 @@ func (r *UserRepo) FindAll() ([]models.User, error) {
 	return users, nil
 }
 
-func (r *UserRepo) AdminUpdateUser(id int, username, email, role, phone, address, city, postalCode, country, documentType, documentNumber string) error {
-	_, err := r.db.DB.Exec(
-		`UPDATE users SET username=$2, email=$3, role=$4, phone=$5, address=$6, city=$7,
-		 postal_code=$8, country=$9, document_type=$10, document_number=$11, updated_at=NOW()
-		 WHERE id=$1`,
-		id, username, email, role, phone, address, city, postalCode, country, documentType, documentNumber)
+func (r *UserRepo) FindTrashed() ([]models.User, error) {
+	rows, err := r.db.DB.Query(
+		`SELECT ` + userCols + ` FROM users WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []models.User
+	for rows.Next() {
+		u, err := scanUser(rows)
+		if err != nil {
+			return nil, err
+		}
+		users = append(users, *u)
+	}
+	return users, nil
+}
+
+func (r *UserRepo) TrashUser(id int) error {
+	_, err := r.db.DB.Exec(`UPDATE users SET deleted_at=NOW() WHERE id=$1 AND deleted_at IS NULL`, id)
 	return err
 }
 
-func (r *UserRepo) DeleteUser(id int) error {
+func (r *UserRepo) TrashUsers(ids []int) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	placeholders := make([]string, len(ids))
+	args := make([]interface{}, len(ids))
+	for i, id := range ids {
+		placeholders[i] = fmt.Sprintf("$%d", i+1)
+		args[i] = id
+	}
+	_, err := r.db.DB.Exec(
+		fmt.Sprintf(`UPDATE users SET deleted_at=NOW() WHERE id IN (%s) AND deleted_at IS NULL`, strings.Join(placeholders, ",")),
+		args...)
+	return err
+}
+
+func (r *UserRepo) RestoreUser(id int) error {
+	_, err := r.db.DB.Exec(`UPDATE users SET deleted_at=NULL WHERE id=$1 AND deleted_at IS NOT NULL`, id)
+	return err
+}
+
+func (r *UserRepo) RestoreUsers(ids []int) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	placeholders := make([]string, len(ids))
+	args := make([]interface{}, len(ids))
+	for i, id := range ids {
+		placeholders[i] = fmt.Sprintf("$%d", i+1)
+		args[i] = id
+	}
+	_, err := r.db.DB.Exec(
+		fmt.Sprintf(`UPDATE users SET deleted_at=NULL WHERE id IN (%s) AND deleted_at IS NOT NULL`, strings.Join(placeholders, ",")),
+		args...)
+	return err
+}
+
+func (r *UserRepo) PermanentDeleteUser(id int) error {
 	_, err := r.db.DB.Exec(`DELETE FROM users WHERE id=$1`, id)
 	return err
 }
 
-func (r *UserRepo) DeleteUsers(ids []int) error {
+func (r *UserRepo) PermanentDeleteUsers(ids []int) error {
 	if len(ids) == 0 {
 		return nil
 	}
@@ -178,6 +230,20 @@ func (r *UserRepo) DeleteUsers(ids []int) error {
 	_, err := r.db.DB.Exec(
 		fmt.Sprintf(`DELETE FROM users WHERE id IN (%s)`, strings.Join(placeholders, ",")),
 		args...)
+	return err
+}
+
+func (r *UserRepo) EmptyTrash() error {
+	_, err := r.db.DB.Exec(`DELETE FROM users WHERE deleted_at IS NOT NULL`)
+	return err
+}
+
+func (r *UserRepo) AdminUpdateUser(id int, username, email, role, phone, address, city, postalCode, country, documentType, documentNumber string) error {
+	_, err := r.db.DB.Exec(
+		`UPDATE users SET username=$2, email=$3, role=$4, phone=$5, address=$6, city=$7,
+		 postal_code=$8, country=$9, document_type=$10, document_number=$11, updated_at=NOW()
+		 WHERE id=$1`,
+		id, username, email, role, phone, address, city, postalCode, country, documentType, documentNumber)
 	return err
 }
 

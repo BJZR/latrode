@@ -148,7 +148,7 @@ func (h *AdminHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 	middleware.WriteJSON(w, http.StatusOK, product)
 }
 
-func (h *AdminHandler) DeleteProduct(w http.ResponseWriter, r *http.Request) {
+func (h *AdminHandler) TrashProduct(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
@@ -156,15 +156,14 @@ func (h *AdminHandler) DeleteProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.productRepo.Delete(id); err != nil {
-		middleware.WriteJSON(w, http.StatusInternalServerError, middleware.APIError{Error: "error al eliminar producto"})
+	if err := h.productRepo.TrashProduct(id); err != nil {
+		middleware.WriteJSON(w, http.StatusInternalServerError, middleware.APIError{Error: "error al mover producto a papelera"})
 		return
 	}
 
 	user := middleware.GetUser(r)
-	h.orderRepo.LogActivity(user.ID, "eliminar_producto", "products", id, middleware.GetClientIP(r))
-
-	middleware.WriteJSON(w, http.StatusOK, map[string]string{"message": "producto eliminado"})
+	h.orderRepo.LogActivity(user.ID, "papelera_producto", "products", id, middleware.GetClientIP(r))
+	middleware.WriteJSON(w, http.StatusOK, map[string]string{"message": "producto movido a papelera"})
 }
 
 func (h *AdminHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
@@ -173,11 +172,9 @@ func (h *AdminHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 		middleware.WriteJSON(w, http.StatusInternalServerError, middleware.APIError{Error: "error al obtener usuarios"})
 		return
 	}
-
 	if users == nil {
 		users = []models.User{}
 	}
-
 	middleware.WriteJSON(w, http.StatusOK, users)
 }
 
@@ -213,12 +210,11 @@ func (h *AdminHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 
 	user := middleware.GetUser(r)
 	h.orderRepo.LogActivity(user.ID, "actualizar_usuario", "users", id, middleware.GetClientIP(r))
-
 	updated, _ := h.userRepo.FindByID(id)
 	middleware.WriteJSON(w, http.StatusOK, updated)
 }
 
-func (h *AdminHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
+func (h *AdminHandler) TrashUser(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
@@ -232,16 +228,16 @@ func (h *AdminHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.userRepo.DeleteUser(id); err != nil {
-		middleware.WriteJSON(w, http.StatusInternalServerError, middleware.APIError{Error: "error al eliminar usuario"})
+	if err := h.userRepo.TrashUser(id); err != nil {
+		middleware.WriteJSON(w, http.StatusInternalServerError, middleware.APIError{Error: "error al mover usuario a papelera"})
 		return
 	}
 
-	h.orderRepo.LogActivity(adminUser.ID, "eliminar_usuario", "users", id, middleware.GetClientIP(r))
-	middleware.WriteJSON(w, http.StatusOK, map[string]string{"message": "usuario eliminado"})
+	h.orderRepo.LogActivity(adminUser.ID, "papelera_usuario", "users", id, middleware.GetClientIP(r))
+	middleware.WriteJSON(w, http.StatusOK, map[string]string{"message": "usuario movido a papelera"})
 }
 
-func (h *AdminHandler) DeleteUsers(w http.ResponseWriter, r *http.Request) {
+func (h *AdminHandler) TrashUsers(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		IDs []int `json:"ids"`
 	}
@@ -258,16 +254,16 @@ func (h *AdminHandler) DeleteUsers(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if err := h.userRepo.DeleteUsers(req.IDs); err != nil {
-		middleware.WriteJSON(w, http.StatusInternalServerError, middleware.APIError{Error: "error al eliminar usuarios"})
+	if err := h.userRepo.TrashUsers(req.IDs); err != nil {
+		middleware.WriteJSON(w, http.StatusInternalServerError, middleware.APIError{Error: "error al mover usuarios a papelera"})
 		return
 	}
 
-	h.orderRepo.LogActivity(adminUser.ID, "eliminar_usuarios", "users", 0, middleware.GetClientIP(r))
-	middleware.WriteJSON(w, http.StatusOK, map[string]int{"deleted": len(req.IDs)})
+	h.orderRepo.LogActivity(adminUser.ID, "papelera_usuarios", "users", 0, middleware.GetClientIP(r))
+	middleware.WriteJSON(w, http.StatusOK, map[string]int{"trashed": len(req.IDs)})
 }
 
-func (h *AdminHandler) DeleteOrder(w http.ResponseWriter, r *http.Request) {
+func (h *AdminHandler) TrashOrder(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
@@ -275,17 +271,17 @@ func (h *AdminHandler) DeleteOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.orderRepo.AdminDeleteOrder(id); err != nil {
-		middleware.WriteJSON(w, http.StatusInternalServerError, middleware.APIError{Error: "error al eliminar orden"})
+	if err := h.orderRepo.AdminTrashOrder(id); err != nil {
+		middleware.WriteJSON(w, http.StatusInternalServerError, middleware.APIError{Error: "error al mover orden a papelera"})
 		return
 	}
 
 	user := middleware.GetUser(r)
-	h.orderRepo.LogActivity(user.ID, "eliminar_orden", "orders", id, middleware.GetClientIP(r))
-	middleware.WriteJSON(w, http.StatusOK, map[string]string{"message": "orden eliminada"})
+	h.orderRepo.LogActivity(user.ID, "papelera_orden", "orders", id, middleware.GetClientIP(r))
+	middleware.WriteJSON(w, http.StatusOK, map[string]string{"message": "orden movida a papelera"})
 }
 
-func (h *AdminHandler) DeleteOrders(w http.ResponseWriter, r *http.Request) {
+func (h *AdminHandler) TrashOrders(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		IDs []int `json:"ids"`
 	}
@@ -294,25 +290,254 @@ func (h *AdminHandler) DeleteOrders(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.orderRepo.AdminDeleteOrders(req.IDs); err != nil {
-		middleware.WriteJSON(w, http.StatusInternalServerError, middleware.APIError{Error: "error al eliminar órdenes"})
+	if err := h.orderRepo.AdminTrashOrders(req.IDs); err != nil {
+		middleware.WriteJSON(w, http.StatusInternalServerError, middleware.APIError{Error: "error al mover órdenes a papelera"})
 		return
 	}
 
 	user := middleware.GetUser(r)
-	h.orderRepo.LogActivity(user.ID, "eliminar_ordenes", "orders", 0, middleware.GetClientIP(r))
+	h.orderRepo.LogActivity(user.ID, "papelera_ordenes", "orders", 0, middleware.GetClientIP(r))
+	middleware.WriteJSON(w, http.StatusOK, map[string]int{"trashed": len(req.IDs)})
+}
+
+func (h *AdminHandler) TrashAllOrders(w http.ResponseWriter, r *http.Request) {
+	if err := h.orderRepo.AdminTrashAllOrders(); err != nil {
+		middleware.WriteJSON(w, http.StatusInternalServerError, middleware.APIError{Error: "error al mover todas las órdenes a papelera"})
+		return
+	}
+
+	user := middleware.GetUser(r)
+	h.orderRepo.LogActivity(user.ID, "papelera_todas_ordenes", "orders", 0, middleware.GetClientIP(r))
+	middleware.WriteJSON(w, http.StatusOK, map[string]string{"message": "todas las órdenes movidas a papelera"})
+}
+
+func (h *AdminHandler) GetTrashedUsers(w http.ResponseWriter, r *http.Request) {
+	users, err := h.userRepo.FindTrashed()
+	if err != nil {
+		middleware.WriteJSON(w, http.StatusInternalServerError, middleware.APIError{Error: "error al obtener papelera de usuarios"})
+		return
+	}
+	if users == nil {
+		users = []models.User{}
+	}
+	middleware.WriteJSON(w, http.StatusOK, users)
+}
+
+func (h *AdminHandler) GetTrashedOrders(w http.ResponseWriter, r *http.Request) {
+	orders, err := h.orderRepo.FindTrashedOrders()
+	if err != nil {
+		middleware.WriteJSON(w, http.StatusInternalServerError, middleware.APIError{Error: "error al obtener papelera de órdenes"})
+		return
+	}
+	if orders == nil {
+		orders = []models.Order{}
+	}
+	middleware.WriteJSON(w, http.StatusOK, orders)
+}
+
+func (h *AdminHandler) GetTrashedProducts(w http.ResponseWriter, r *http.Request) {
+	products, err := h.productRepo.FindTrashed()
+	if err != nil {
+		middleware.WriteJSON(w, http.StatusInternalServerError, middleware.APIError{Error: "error al obtener papelera de productos"})
+		return
+	}
+	if products == nil {
+		products = []models.Product{}
+	}
+	middleware.WriteJSON(w, http.StatusOK, products)
+}
+
+func (h *AdminHandler) RestoreUser(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		middleware.WriteJSON(w, http.StatusBadRequest, middleware.APIError{Error: "id inválido"})
+		return
+	}
+	if err := h.userRepo.RestoreUser(id); err != nil {
+		middleware.WriteJSON(w, http.StatusInternalServerError, middleware.APIError{Error: "error al restaurar usuario"})
+		return
+	}
+	user := middleware.GetUser(r)
+	h.orderRepo.LogActivity(user.ID, "restaurar_usuario", "users", id, middleware.GetClientIP(r))
+	middleware.WriteJSON(w, http.StatusOK, map[string]string{"message": "usuario restaurado"})
+}
+
+func (h *AdminHandler) RestoreUsers(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		IDs []int `json:"ids"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		middleware.WriteJSON(w, http.StatusBadRequest, middleware.APIError{Error: "datos inválidos"})
+		return
+	}
+	if err := h.userRepo.RestoreUsers(req.IDs); err != nil {
+		middleware.WriteJSON(w, http.StatusInternalServerError, middleware.APIError{Error: "error al restaurar usuarios"})
+		return
+	}
+	user := middleware.GetUser(r)
+	h.orderRepo.LogActivity(user.ID, "restaurar_usuarios", "users", 0, middleware.GetClientIP(r))
+	middleware.WriteJSON(w, http.StatusOK, map[string]int{"restored": len(req.IDs)})
+}
+
+func (h *AdminHandler) RestoreOrder(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		middleware.WriteJSON(w, http.StatusBadRequest, middleware.APIError{Error: "id inválido"})
+		return
+	}
+	if err := h.orderRepo.RestoreOrder(id); err != nil {
+		middleware.WriteJSON(w, http.StatusInternalServerError, middleware.APIError{Error: "error al restaurar orden"})
+		return
+	}
+	user := middleware.GetUser(r)
+	h.orderRepo.LogActivity(user.ID, "restaurar_orden", "orders", id, middleware.GetClientIP(r))
+	middleware.WriteJSON(w, http.StatusOK, map[string]string{"message": "orden restaurada"})
+}
+
+func (h *AdminHandler) RestoreOrders(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		IDs []int `json:"ids"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		middleware.WriteJSON(w, http.StatusBadRequest, middleware.APIError{Error: "datos inválidos"})
+		return
+	}
+	if err := h.orderRepo.RestoreOrders(req.IDs); err != nil {
+		middleware.WriteJSON(w, http.StatusInternalServerError, middleware.APIError{Error: "error al restaurar órdenes"})
+		return
+	}
+	user := middleware.GetUser(r)
+	h.orderRepo.LogActivity(user.ID, "restaurar_ordenes", "orders", 0, middleware.GetClientIP(r))
+	middleware.WriteJSON(w, http.StatusOK, map[string]int{"restored": len(req.IDs)})
+}
+
+func (h *AdminHandler) RestoreProduct(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		middleware.WriteJSON(w, http.StatusBadRequest, middleware.APIError{Error: "id inválido"})
+		return
+	}
+	if err := h.productRepo.RestoreProduct(id); err != nil {
+		middleware.WriteJSON(w, http.StatusInternalServerError, middleware.APIError{Error: "error al restaurar producto"})
+		return
+	}
+	user := middleware.GetUser(r)
+	h.orderRepo.LogActivity(user.ID, "restaurar_producto", "products", id, middleware.GetClientIP(r))
+	middleware.WriteJSON(w, http.StatusOK, map[string]string{"message": "producto restaurado"})
+}
+
+func (h *AdminHandler) PermanentDeleteUser(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		middleware.WriteJSON(w, http.StatusBadRequest, middleware.APIError{Error: "id inválido"})
+		return
+	}
+	adminUser := middleware.GetUser(r)
+	if adminUser.ID == id {
+		middleware.WriteJSON(w, http.StatusBadRequest, middleware.APIError{Error: "no puedes eliminarte a ti mismo"})
+		return
+	}
+	if err := h.userRepo.PermanentDeleteUser(id); err != nil {
+		middleware.WriteJSON(w, http.StatusInternalServerError, middleware.APIError{Error: "error al eliminar usuario permanentemente"})
+		return
+	}
+	h.orderRepo.LogActivity(adminUser.ID, "eliminar_permanente_usuario", "users", id, middleware.GetClientIP(r))
+	middleware.WriteJSON(w, http.StatusOK, map[string]string{"message": "usuario eliminado permanentemente"})
+}
+
+func (h *AdminHandler) PermanentDeleteUsers(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		IDs []int `json:"ids"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		middleware.WriteJSON(w, http.StatusBadRequest, middleware.APIError{Error: "datos inválidos"})
+		return
+	}
+	adminUser := middleware.GetUser(r)
+	for _, id := range req.IDs {
+		if adminUser.ID == id {
+			middleware.WriteJSON(w, http.StatusBadRequest, middleware.APIError{Error: "no puedes eliminarte a ti mismo"})
+			return
+		}
+	}
+	if err := h.userRepo.PermanentDeleteUsers(req.IDs); err != nil {
+		middleware.WriteJSON(w, http.StatusInternalServerError, middleware.APIError{Error: "error al eliminar usuarios permanentemente"})
+		return
+	}
+	h.orderRepo.LogActivity(adminUser.ID, "eliminar_permanente_usuarios", "users", 0, middleware.GetClientIP(r))
 	middleware.WriteJSON(w, http.StatusOK, map[string]int{"deleted": len(req.IDs)})
 }
 
-func (h *AdminHandler) DeleteAllOrders(w http.ResponseWriter, r *http.Request) {
-	if err := h.orderRepo.AdminDeleteAllOrders(); err != nil {
-		middleware.WriteJSON(w, http.StatusInternalServerError, middleware.APIError{Error: "error al eliminar todas las órdenes"})
+func (h *AdminHandler) PermanentDeleteOrder(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		middleware.WriteJSON(w, http.StatusBadRequest, middleware.APIError{Error: "id inválido"})
 		return
 	}
-
+	if err := h.orderRepo.PermanentDeleteOrder(id); err != nil {
+		middleware.WriteJSON(w, http.StatusInternalServerError, middleware.APIError{Error: "error al eliminar orden permanentemente"})
+		return
+	}
 	user := middleware.GetUser(r)
-	h.orderRepo.LogActivity(user.ID, "eliminar_todas_ordenes", "orders", 0, middleware.GetClientIP(r))
-	middleware.WriteJSON(w, http.StatusOK, map[string]string{"message": "todas las órdenes eliminadas"})
+	h.orderRepo.LogActivity(user.ID, "eliminar_permanente_orden", "orders", id, middleware.GetClientIP(r))
+	middleware.WriteJSON(w, http.StatusOK, map[string]string{"message": "orden eliminada permanentemente"})
+}
+
+func (h *AdminHandler) PermanentDeleteOrders(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		IDs []int `json:"ids"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		middleware.WriteJSON(w, http.StatusBadRequest, middleware.APIError{Error: "datos inválidos"})
+		return
+	}
+	if err := h.orderRepo.PermanentDeleteOrders(req.IDs); err != nil {
+		middleware.WriteJSON(w, http.StatusInternalServerError, middleware.APIError{Error: "error al eliminar órdenes permanentemente"})
+		return
+	}
+	user := middleware.GetUser(r)
+	h.orderRepo.LogActivity(user.ID, "eliminar_permanente_ordenes", "orders", 0, middleware.GetClientIP(r))
+	middleware.WriteJSON(w, http.StatusOK, map[string]int{"deleted": len(req.IDs)})
+}
+
+func (h *AdminHandler) PermanentDeleteProduct(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		middleware.WriteJSON(w, http.StatusBadRequest, middleware.APIError{Error: "ID inválido"})
+		return
+	}
+	if err := h.productRepo.PermanentDeleteProduct(id); err != nil {
+		middleware.WriteJSON(w, http.StatusInternalServerError, middleware.APIError{Error: "error al eliminar producto permanentemente"})
+		return
+	}
+	user := middleware.GetUser(r)
+	h.orderRepo.LogActivity(user.ID, "eliminar_permanente_producto", "products", id, middleware.GetClientIP(r))
+	middleware.WriteJSON(w, http.StatusOK, map[string]string{"message": "producto eliminado"})
+}
+
+func (h *AdminHandler) EmptyTrash(w http.ResponseWriter, r *http.Request) {
+	section := r.URL.Query().Get("section")
+	switch section {
+	case "users":
+		h.userRepo.EmptyTrash()
+	case "orders":
+		h.orderRepo.EmptyOrdersTrash()
+	case "products":
+		h.productRepo.EmptyProductsTrash()
+	default:
+		h.userRepo.EmptyTrash()
+		h.orderRepo.EmptyOrdersTrash()
+		h.productRepo.EmptyProductsTrash()
+	}
+	user := middleware.GetUser(r)
+	h.orderRepo.LogActivity(user.ID, "vaciar_papelera", "all", 0, middleware.GetClientIP(r))
+	middleware.WriteJSON(w, http.StatusOK, map[string]string{"message": "papelera vaciada"})
 }
 
 func (h *AdminHandler) GetPaymentMethods(w http.ResponseWriter, r *http.Request) {

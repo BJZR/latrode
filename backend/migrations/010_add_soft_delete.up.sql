@@ -1,0 +1,14 @@
+DO $$ BEGIN
+    ALTER TABLE users ADD COLUMN deleted_at TIMESTAMP NULL;
+EXCEPTION WHEN duplicate_column THEN NULL;
+END $$;
+
+DO $$ BEGIN
+    ALTER TABLE orders ADD COLUMN deleted_at TIMESTAMP NULL;
+EXCEPTION WHEN duplicate_column THEN NULL;
+END $$;
+
+DO $$ BEGIN
+    ALTER TABLE products ADD COLUMN deleted_at TIMESTAMP NULL;
+EXCEPTION WHEN duplicate_column THEN NULL;
+END $$;

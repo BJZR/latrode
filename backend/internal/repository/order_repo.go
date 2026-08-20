@@ -26,24 +26,28 @@ func scanOrder(s scannable) (*models.Order, error) {
 	err := s.Scan(&o.ID, &o.UserID, &o.Total, &o.Status, &o.PaymentStatus,
 		&o.PaymentMethod, &o.ShippingName, &o.ShippingPhone, &o.ShippingAddress,
 		&o.ShippingCity, &o.ShippingPostalCode, &o.ShippingCountry,
-		&o.WompiTransactionID, &o.WompiStatus, &o.WompiReference, &o.CreatedAt)
+		&o.WompiTransactionID, &o.WompiStatus, &o.WompiReference, &o.CreatedAt, &o.DeletedAt)
 	if err != nil {
 		return nil, err
 	}
 	return o, nil
 }
 
+const orderCols = `id, user_id, total, status, payment_status, payment_method,
+	shipping_name, shipping_phone, shipping_address, shipping_city, shipping_postal_code, shipping_country,
+	COALESCE(wompi_transaction_id,''), COALESCE(wompi_status,''), COALESCE(wompi_reference,''), created_at, deleted_at`
+
 func (r *OrderRepo) FindByUserID(userID int) ([]models.Order, error) {
 	rows, err := r.db.DB.Query(
 		`SELECT o.id, o.user_id, o.total, o.status, o.payment_status, o.payment_method,
 		 o.shipping_name, o.shipping_phone, o.shipping_address, o.shipping_city, o.shipping_postal_code, o.shipping_country,
-		 COALESCE(o.wompi_transaction_id,''), COALESCE(o.wompi_status,''), COALESCE(o.wompi_reference,''), o.created_at,
+		 COALESCE(o.wompi_transaction_id,''), COALESCE(o.wompi_status,''), COALESCE(o.wompi_reference,''), o.created_at, o.deleted_at,
 		 oi.id, oi.order_id, oi.product_id, oi.product_name, oi.product_price, oi.color_name, COALESCE(oi.color_image_url,''), oi.size, oi.quantity, oi.subtotal,
 		 COALESCE(p.image_url,'')
 		 FROM orders o
 		 LEFT JOIN order_items oi ON oi.order_id = o.id
 		 LEFT JOIN products p ON p.id = oi.product_id
-		 WHERE o.user_id=$1
+		 WHERE o.user_id=$1 AND o.deleted_at IS NULL
 		 ORDER BY o.created_at DESC, oi.id`, userID)
 	if err != nil {
 		return nil, err
@@ -62,7 +66,7 @@ func (r *OrderRepo) FindByUserID(userID int) ([]models.Order, error) {
 
 		err := rows.Scan(&o.ID, &o.UserID, &o.Total, &o.Status, &o.PaymentStatus, &o.PaymentMethod,
 			&o.ShippingName, &o.ShippingPhone, &o.ShippingAddress, &o.ShippingCity, &o.ShippingPostalCode, &o.ShippingCountry,
-			&o.WompiTransactionID, &o.WompiStatus, &o.WompiReference, &o.CreatedAt,
+			&o.WompiTransactionID, &o.WompiStatus, &o.WompiReference, &o.CreatedAt, &o.DeletedAt,
 			&oiID, &oiOrderID, &oiProductID, &oiProductName, &oiProductPrice, &oiColorName, &oiColorImageUrl, &oiSize, &oiQuantity, &oiSubtotal, &oiImageUrl)
 		if err != nil {
 			return nil, err
@@ -125,7 +129,7 @@ func (r *OrderRepo) FindByID(id int) (*models.Order, error) {
 	o, err := scanOrder(r.db.DB.QueryRow(
 		`SELECT id, user_id, total, status, payment_status, payment_method,
 		 shipping_name, shipping_phone, shipping_address, shipping_city, shipping_postal_code, shipping_country,
-		 COALESCE(wompi_transaction_id,''), COALESCE(wompi_status,''), COALESCE(wompi_reference,''), created_at
+		 COALESCE(wompi_transaction_id,''), COALESCE(wompi_status,''), COALESCE(wompi_reference,''), created_at, deleted_at
 		 FROM orders WHERE id=$1`, id))
 	if err != nil {
 		return nil, err
@@ -146,7 +150,7 @@ func (r *OrderRepo) Create(userID int, req *models.CreateOrderRequest,
 	for _, ci := range cartItems {
 		if ci.Product != nil {
 			var currentStock int
-			tx.QueryRow(`SELECT stock FROM products WHERE id=$1 FOR UPDATE`, ci.Product.ID).Scan(&currentStock)
+			tx.QueryRow(`SELECT stock FROM products WHERE id=$1 AND deleted_at IS NULL FOR UPDATE`, ci.Product.ID).Scan(&currentStock)
 			if currentStock != -1 && currentStock < 1 {
 				return nil, ErrInsufficientStock
 			}
@@ -276,8 +280,8 @@ func (r *OrderRepo) UpdateStatus(id int, status, paymentStatus string) error {
 func (r *OrderRepo) FindAllWithFilters(status, paymentStatus string) ([]models.Order, error) {
 	query := `SELECT id, user_id, total, status, payment_status, payment_method,
 	 shipping_name, shipping_phone, shipping_address, shipping_city, shipping_postal_code, shipping_country,
-	 COALESCE(wompi_transaction_id,''), COALESCE(wompi_status,''), COALESCE(wompi_reference,''), created_at
-	 FROM orders WHERE 1=1`
+	 COALESCE(wompi_transaction_id,''), COALESCE(wompi_status,''), COALESCE(wompi_reference,''), created_at, deleted_at
+	 FROM orders WHERE deleted_at IS NULL`
 	var args []interface{}
 	argIdx := 1
 
@@ -315,8 +319,8 @@ func (r *OrderRepo) FindRecent(limit int) ([]models.Order, error) {
 	rows, err := r.db.DB.Query(
 		`SELECT id, user_id, total, status, payment_status, payment_method,
 		 shipping_name, shipping_phone, shipping_address, shipping_city, shipping_postal_code, shipping_country,
-		 COALESCE(wompi_transaction_id,''), COALESCE(wompi_status,''), COALESCE(wompi_reference,''), created_at
-		 FROM orders ORDER BY created_at DESC LIMIT $1`, limit)
+		 COALESCE(wompi_transaction_id,''), COALESCE(wompi_status,''), COALESCE(wompi_reference,''), created_at, deleted_at
+		 FROM orders WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT $1`, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -578,20 +582,88 @@ func buildQuery(base string, conditions []string, args []interface{}) (string, [
 	return base, args
 }
 
-func (r *OrderRepo) AdminDeleteOrder(orderID int) error {
+func (r *OrderRepo) AdminTrashOrder(orderID int) error {
+	_, err := r.db.DB.Exec(`UPDATE orders SET deleted_at=NOW() WHERE id=$1 AND deleted_at IS NULL`, orderID)
+	return err
+}
+
+func (r *OrderRepo) AdminTrashOrders(ids []int) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	placeholders := make([]string, len(ids))
+	args := make([]interface{}, len(ids))
+	for i, id := range ids {
+		placeholders[i] = fmt.Sprintf("$%d", i+1)
+		args[i] = id
+	}
+	_, err := r.db.DB.Exec(
+		fmt.Sprintf(`UPDATE orders SET deleted_at=NOW() WHERE id IN (%s) AND deleted_at IS NULL`, strings.Join(placeholders, ",")),
+		args...)
+	return err
+}
+
+func (r *OrderRepo) AdminTrashAllOrders() error {
+	_, err := r.db.DB.Exec(`UPDATE orders SET deleted_at=NOW() WHERE deleted_at IS NULL`)
+	return err
+}
+
+func (r *OrderRepo) FindTrashedOrders() ([]models.Order, error) {
+	rows, err := r.db.DB.Query(
+		`SELECT id, user_id, total, status, payment_status, payment_method,
+		 shipping_name, shipping_phone, shipping_address, shipping_city, shipping_postal_code, shipping_country,
+		 COALESCE(wompi_transaction_id,''), COALESCE(wompi_status,''), COALESCE(wompi_reference,''), created_at, deleted_at
+		 FROM orders WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var orders []models.Order
+	for rows.Next() {
+		o, err := scanOrder(rows)
+		if err != nil {
+			return nil, err
+		}
+		o.Items = r.findItems(o.ID)
+		orders = append(orders, *o)
+	}
+	return orders, nil
+}
+
+func (r *OrderRepo) RestoreOrder(orderID int) error {
+	_, err := r.db.DB.Exec(`UPDATE orders SET deleted_at=NULL WHERE id=$1 AND deleted_at IS NOT NULL`, orderID)
+	return err
+}
+
+func (r *OrderRepo) RestoreOrders(ids []int) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	placeholders := make([]string, len(ids))
+	args := make([]interface{}, len(ids))
+	for i, id := range ids {
+		placeholders[i] = fmt.Sprintf("$%d", i+1)
+		args[i] = id
+	}
+	_, err := r.db.DB.Exec(
+		fmt.Sprintf(`UPDATE orders SET deleted_at=NULL WHERE id IN (%s) AND deleted_at IS NOT NULL`, strings.Join(placeholders, ",")),
+		args...)
+	return err
+}
+
+func (r *OrderRepo) PermanentDeleteOrder(orderID int) error {
 	tx, err := r.db.DB.Begin()
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
-
 	tx.Exec(`DELETE FROM order_items WHERE order_id=$1`, orderID)
 	tx.Exec(`DELETE FROM orders WHERE id=$1`, orderID)
-
 	return tx.Commit()
 }
 
-func (r *OrderRepo) AdminDeleteOrders(ids []int) error {
+func (r *OrderRepo) PermanentDeleteOrders(ids []int) error {
 	if len(ids) == 0 {
 		return nil
 	}
@@ -600,7 +672,6 @@ func (r *OrderRepo) AdminDeleteOrders(ids []int) error {
 		return err
 	}
 	defer tx.Rollback()
-
 	placeholders := make([]string, len(ids))
 	args := make([]interface{}, len(ids))
 	for i, id := range ids {
@@ -610,19 +681,16 @@ func (r *OrderRepo) AdminDeleteOrders(ids []int) error {
 	ph := strings.Join(placeholders, ",")
 	tx.Exec(fmt.Sprintf(`DELETE FROM order_items WHERE order_id IN (%s)`, ph), args...)
 	tx.Exec(fmt.Sprintf(`DELETE FROM orders WHERE id IN (%s)`, ph), args...)
-
 	return tx.Commit()
 }
 
-func (r *OrderRepo) AdminDeleteAllOrders() error {
+func (r *OrderRepo) EmptyOrdersTrash() error {
 	tx, err := r.db.DB.Begin()
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
-
-	tx.Exec(`DELETE FROM order_items`)
-	tx.Exec(`DELETE FROM orders`)
-
+	tx.Exec(`DELETE FROM order_items WHERE order_id IN (SELECT id FROM orders WHERE deleted_at IS NOT NULL)`)
+	tx.Exec(`DELETE FROM orders WHERE deleted_at IS NOT NULL`)
 	return tx.Commit()
 }

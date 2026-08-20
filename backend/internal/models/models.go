@@ -3,21 +3,22 @@ package models
 import "time"
 
 type User struct {
-	ID             int       `json:"id"`
-	Username       string    `json:"username"`
-	Email          string    `json:"email"`
-	PasswordHash   string    `json:"-"`
-	Role           string    `json:"role"`
-	GoogleID       string    `json:"googleId,omitempty"`
-	HasPassword    bool      `json:"hasPassword"`
-	Phone          string    `json:"phone"`
-	Address        string    `json:"address"`
-	City           string    `json:"city"`
-	PostalCode     string    `json:"postalCode"`
-	Country        string    `json:"country"`
-	DocumentType   string    `json:"documentType"`
-	DocumentNumber string    `json:"documentNumber"`
-	CreatedAt      time.Time `json:"createdAt"`
+	ID             int        `json:"id"`
+	Username       string     `json:"username"`
+	Email          string     `json:"email"`
+	PasswordHash   string     `json:"-"`
+	Role           string     `json:"role"`
+	GoogleID       string     `json:"googleId,omitempty"`
+	HasPassword    bool       `json:"hasPassword"`
+	Phone          string     `json:"phone"`
+	Address        string     `json:"address"`
+	City           string     `json:"city"`
+	PostalCode     string     `json:"postalCode"`
+	Country        string     `json:"country"`
+	DocumentType   string     `json:"documentType"`
+	DocumentNumber string     `json:"documentNumber"`
+	CreatedAt      time.Time  `json:"createdAt"`
+	DeletedAt      *time.Time `json:"deletedAt,omitempty"`
 }
 
 type Session struct {
@@ -28,19 +29,20 @@ type Session struct {
 }
 
 type Product struct {
-	ID          int       `json:"id"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	Price       float64   `json:"price"`
-	FinalPrice  float64   `json:"finalPrice"`
-	Stock       int       `json:"stock"`
-	Category    string    `json:"category"`
-	ImageURL    string    `json:"imageUrl"`
-	Sizes       []string  `json:"sizes"`
-	Material    string    `json:"material"`
-	Care        string    `json:"care"`
-	Colors      []Color   `json:"colors,omitempty"`
-	CreatedAt   time.Time `json:"createdAt"`
+	ID          int        `json:"id"`
+	Name        string     `json:"name"`
+	Description string     `json:"description"`
+	Price       float64    `json:"price"`
+	FinalPrice  float64    `json:"finalPrice"`
+	Stock       int        `json:"stock"`
+	Category    string     `json:"category"`
+	ImageURL    string     `json:"imageUrl"`
+	Sizes       []string   `json:"sizes"`
+	Material    string     `json:"material"`
+	Care        string     `json:"care"`
+	Colors      []Color    `json:"colors,omitempty"`
+	CreatedAt   time.Time  `json:"createdAt"`
+	DeletedAt   *time.Time `json:"deletedAt,omitempty"`
 }
 
 type SizeStock struct {
@@ -96,6 +98,7 @@ type Order struct {
 	WompiReference     string      `json:"wompiReference,omitempty"`
 	Items              []OrderItem `json:"items,omitempty"`
 	CreatedAt          time.Time   `json:"createdAt"`
+	DeletedAt          *time.Time  `json:"deletedAt,omitempty"`
 }
 
 type OrderItem struct {
