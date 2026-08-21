@@ -8,7 +8,7 @@ function escapeHTML(str) {
 class App {
   imgUrl(url) {
     if (!url || url.startsWith('http') || url.startsWith('/')) return url;
-    return 'assets/img/' + url;
+    return '/images/' + url;
   }
 
   constructor() {
@@ -22,6 +22,7 @@ class App {
     this.isSearching = false;
     this.lastScrollPosition = 0;
     this.lastExpandedIndex = null;
+    this.pendingPurchase = JSON.parse(sessionStorage.getItem('pendingPurchase') || 'null');
     this.page = 1;
     this.limit = 20;
     this.totalPages = 1;
@@ -35,6 +36,7 @@ class App {
     this.bindEvents();
     this.loadTheme();
     await this.checkAuthStatus();
+    this.resumePendingPurchase();
     this.loadSettings();
     this.checkEmailQuota();
     document.getElementById("splash-screen").classList.add("hidden");
@@ -71,6 +73,11 @@ class App {
         this.updateLoggedInUI();
         await this.loadCart();
         await this.loadFavorites();
+        if (this.user.googleId && !this.user.hasPassword) {
+          setTimeout(() => {
+            document.getElementById("set-password-overlay").classList.add("active");
+          }, 1000);
+        }
         return;
       }
     } catch (e) {
@@ -649,10 +656,7 @@ class App {
     } else {
       document.getElementById("profile-overlay").classList.add("active");
       if (this.user) {
-        document.getElementById("profile-options").style.display = "none";
-        document.getElementById("login-form").style.display = "none";
-        document.getElementById("register-form").style.display = "none";
-        document.getElementById("profile-logged-in").style.display = "block";
+        this.updateLoggedInUI();
       } else {
         this.showProfileOptions();
       }
@@ -1360,6 +1364,8 @@ class App {
     }
 
     if (!this.user) {
+      this.pendingPurchase = { productId: this.currentProduct.id };
+      sessionStorage.setItem('pendingPurchase', JSON.stringify(this.pendingPurchase));
       this.closeAddToCartModal();
       this.showConfirmDialog(
         "Mi cuenta",
@@ -1370,7 +1376,7 @@ class App {
           document.getElementById("profile-overlay").classList.add("active");
           this.showProfileOptions();
         },
-        null,
+        () => { this.pendingPurchase = null; sessionStorage.removeItem('pendingPurchase'); },
         "Aceptar",
         "Cancelar",
       );
@@ -1396,6 +1402,8 @@ class App {
       }, 300);
     } catch (error) {
       if (error.message?.includes("iniciar sesión")) {
+        this.pendingPurchase = { productId: this.currentProduct.id };
+        sessionStorage.setItem('pendingPurchase', JSON.stringify(this.pendingPurchase));
         this.closeAddToCartModal();
         this.showConfirmDialog(
           "Mi cuenta",
@@ -1405,7 +1413,7 @@ class App {
             document.getElementById("profile-overlay").classList.add("active");
             this.showProfileOptions();
           },
-          null,
+          () => { this.pendingPurchase = null; sessionStorage.removeItem('pendingPurchase'); },
           "Aceptar",
           "Cancelar",
         );
@@ -1419,6 +1427,8 @@ class App {
     if (!this.currentProduct) return;
 
     if (!this.user) {
+      this.pendingPurchase = { productId: this.currentProduct.id };
+      sessionStorage.setItem('pendingPurchase', JSON.stringify(this.pendingPurchase));
       this.showConfirmDialog(
         "Mi cuenta",
         "Debes iniciar sesión o registrarte antes de comprar.",
@@ -1428,7 +1438,7 @@ class App {
           document.getElementById("profile-overlay").classList.add("active");
           this.showProfileOptions();
         },
-        null,
+        () => { this.pendingPurchase = null; sessionStorage.removeItem('pendingPurchase'); },
         "Aceptar",
         "Cancelar",
       );
@@ -1472,6 +1482,17 @@ class App {
       .catch((err) => {
         this.showNotification(err.message || "Error agregando al carrito", "error");
       });
+  }
+
+  resumePendingPurchase() {
+    const pp = this.pendingPurchase || JSON.parse(sessionStorage.getItem('pendingPurchase') || 'null');
+    if (!pp || !this.user) return;
+    this.pendingPurchase = null;
+    sessionStorage.removeItem('pendingPurchase');
+    const card = document.querySelector(`.card[data-product-id="${pp.productId}"]`);
+    if (!card) return;
+    this.expandCard(card);
+    setTimeout(() => this.openAddToCartModal(), 300);
   }
 
   async autoSaveProfile(data) {
@@ -1818,7 +1839,11 @@ class App {
     document.getElementById("profile-options").style.display = "";
     document.getElementById("login-form").style.display = "none";
     document.getElementById("register-form").style.display = "none";
+    document.getElementById("password-reset-form").style.display = "none";
     document.getElementById("profile-logged-in").style.display = "none";
+    document.getElementById("reset-step-1").style.display = "block";
+    document.getElementById("reset-step-2").style.display = "none";
+    document.getElementById("reset-step-3").style.display = "none";
   }
 
   showLoggedInPanel() {
@@ -2041,6 +2066,7 @@ class App {
       await this.loadFavorites();
       const name = this.user?.username || ''; this.showNotification(name ? `Bienvenido ${name}` : "Bienvenido");
       this.closeAllOverlays();
+      this.resumePendingPurchase();
     } catch (error) {
       console.error('Login error:', error);
       this.showNotification(error.message || "Error al iniciar sesión");
@@ -2081,6 +2107,22 @@ class App {
       } else {
         setPwdBtn.style.display = "none";
       }
+      const checkoutBtn = document.getElementById("profile-checkout-btn");
+      if (checkoutBtn) {
+        checkoutBtn.style.display = (this.cart && this.cart.length > 0) ? "" : "none";
+      }
+      const avatarImg = document.getElementById("profile-user-img");
+      const avatarSvg = document.getElementById("profile-user-svg");
+      if (avatarImg && avatarSvg) {
+        if (this.user.avatarUrl) {
+          avatarImg.src = this.user.avatarUrl;
+          avatarImg.style.display = "";
+          avatarSvg.style.display = "none";
+        } else {
+          avatarImg.style.display = "none";
+          avatarSvg.style.display = "";
+        }
+      }
     }
   }
 
@@ -2088,6 +2130,7 @@ class App {
     document.getElementById("profile-options").style.display = "block";
     document.getElementById("login-form").style.display = "none";
     document.getElementById("register-form").style.display = "none";
+    document.getElementById("password-reset-form").style.display = "none";
     document.getElementById("profile-logged-in").style.display = "none";
     document.getElementById("logout-option").style.display = "none";
   }
@@ -2096,6 +2139,9 @@ class App {
     document.getElementById("login-form").style.display = "none";
     document.getElementById("register-form").style.display = "none";
     document.getElementById("password-reset-form").style.display = "none";
+    document.getElementById("reset-step-1").style.display = "block";
+    document.getElementById("reset-step-2").style.display = "none";
+    document.getElementById("reset-step-3").style.display = "none";
     document.getElementById("theme-overlay").classList.remove("active");
     document.getElementById("profile-options").style.display = "";
   }

@@ -27,7 +27,7 @@ let globalSizes = [];
 
 function imgUrl(url) {
     if (!url || url.startsWith('http') || url.startsWith('/')) return url;
-    return '/assets/img/' + url;
+    return '/images/' + url;
 }
 
 function formatCurrency(amount) {
@@ -101,7 +101,7 @@ function setImageUploadPreview(url) {
     const ph = document.getElementById('image-upload-placeholder');
     const area = document.getElementById('image-upload-area');
     if (!preview || !url) return;
-    preview.src = url.startsWith('http') || url.startsWith('/') ? url : '/assets/img/' + url;
+    preview.src = url.startsWith('http') || url.startsWith('/') ? url : '/images/' + url;
     preview.style.display = 'block'; ph.style.display = 'none'; area.classList.add('has-image');
     document.getElementById('image_url_hidden').value = url;
 }

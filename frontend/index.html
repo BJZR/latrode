@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <style id="splash-scroll-lock">html,body{overflow:hidden!important;height:100%!important;margin:0}</style>
     <link rel="icon" type="image/svg+xml" href="assets/latrode-icon-white.svg" />
-    <link rel="stylesheet" href="css/styles.css?v=17" />
+    <link rel="stylesheet" href="css/styles.css?v=19" />
     <title>latrode</title>
   </head>
 
@@ -370,8 +370,9 @@
           </div>
           <div class="menu-content">
             <div class="user-info">
-              <div class="user-avatar">
-                <svg viewBox="0 0 24 24"><use href="assets/icons/profile.svg#icon"/></svg>
+              <div class="user-avatar" id="profile-user-avatar">
+                <img id="profile-user-img" src="" alt="" style="display:none" class="user-avatar-img">
+                <svg id="profile-user-svg" viewBox="0 0 24 24"><use href="assets/icons/profile.svg#icon"/></svg>
               </div>
               <div class="user-details">
                 <h3 id="user-name">Usuario</h3>
@@ -796,6 +797,6 @@
     </div>
 
     <script src="js/api.js?v=7"></script>
-    <script src="js/app.js?v=20"></script>
+    <script src="js/app.js?v=30"></script>
   </body>
 </html>
