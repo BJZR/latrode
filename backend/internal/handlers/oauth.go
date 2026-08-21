@@ -58,9 +58,10 @@ type googleTokenResp struct {
 }
 
 type googleUserInfo struct {
-	ID    string `json:"id"`
-	Email string `json:"email"`
-	Name  string `json:"name"`
+	ID      string `json:"id"`
+	Email   string `json:"email"`
+	Name    string `json:"name"`
+	Picture string `json:"picture"`
 }
 
 func (h *OAuthHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
@@ -95,11 +96,14 @@ func (h *OAuthHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.userRepo.FindByEmail(info.Email)
 	if err != nil {
-		user, err = h.userRepo.CreateFromGoogle(info.Name, info.Email, info.ID)
+		user, err = h.userRepo.CreateFromGoogle(info.Name, info.Email, info.ID, info.Picture)
 		if err != nil {
 			http.Error(w, "error al crear usuario: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
+	} else if info.Picture != "" && user.AvatarURL == "" {
+		h.userRepo.UpdateAvatarURL(user.ID, info.Picture)
+		user.AvatarURL = info.Picture
 	}
 
 	sessionToken := middleware.GenerateSessionToken()

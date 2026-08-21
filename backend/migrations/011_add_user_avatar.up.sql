@@ -1,0 +1,4 @@
+DO $$ BEGIN
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url VARCHAR(500) DEFAULT '';
+EXCEPTION WHEN duplicate_column THEN NULL;
+END $$;

@@ -10,6 +10,7 @@ type User struct {
 	Role           string     `json:"role"`
 	GoogleID       string     `json:"googleId,omitempty"`
 	HasPassword    bool       `json:"hasPassword"`
+	AvatarURL      string     `json:"avatarUrl,omitempty"`
 	Phone          string     `json:"phone"`
 	Address        string     `json:"address"`
 	City           string     `json:"city"`

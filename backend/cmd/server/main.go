@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
+	"io"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -21,6 +23,8 @@ import (
 
 func main() {
 	cfg := config.Load()
+
+	migrateImages(cfg.Frontend, cfg.ImagesDir)
 
 	db, err := database.Connect(cfg)
 	if err != nil {
@@ -204,6 +208,10 @@ func main() {
 	mux.Handle("/css/", cacheFs)
 	mux.Handle("/js/", cacheFs)
 	mux.Handle("/admin/", cacheFs)
+
+	imagesFs := http.FileServer(http.Dir(cfg.ImagesDir))
+	mux.Handle("/images/", http.StripPrefix("/images/", imagesFs))
+
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" {
 			fs.ServeHTTP(w, r)
@@ -243,4 +251,52 @@ func main() {
 	}
 
 	log.Println("Servidor detenido correctamente")
+}
+
+func migrateImages(frontendPath, imagesDir string) {
+	oldDir := filepath.Join(frontendPath, "assets", "img")
+	if _, err := os.Stat(oldDir); os.IsNotExist(err) {
+		return
+	}
+	if err := os.MkdirAll(imagesDir, 0755); err != nil {
+		log.Printf("migrateImages: error creando %s: %v", imagesDir, err)
+		return
+	}
+	entries, err := os.ReadDir(oldDir)
+	if err != nil {
+		log.Printf("migrateImages: error leyendo %s: %v", oldDir, err)
+		return
+	}
+	moved := 0
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		src := filepath.Join(oldDir, e.Name())
+		dst := filepath.Join(imagesDir, e.Name())
+		if _, err := os.Stat(dst); err == nil {
+			continue
+		}
+		in, err := os.Open(src)
+		if err != nil {
+			continue
+		}
+		out, err := os.Create(dst)
+		if err != nil {
+			in.Close()
+			continue
+		}
+		if _, err := io.Copy(out, in); err != nil {
+			out.Close()
+			in.Close()
+			continue
+		}
+		out.Close()
+		in.Close()
+		os.Remove(src)
+		moved++
+	}
+	if moved > 0 {
+		log.Printf("migrateImages: %d imágenes movidas de %s → %s", moved, oldDir, imagesDir)
+	}
 }

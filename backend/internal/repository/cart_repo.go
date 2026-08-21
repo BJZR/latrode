@@ -118,7 +118,7 @@ func (r *CartRepo) Clear(userID int) error {
 
 func (r *CartRepo) getProduct(productID int) *models.Product {
 	p, err := scanProduct(r.db.DB.QueryRow(
-		`SELECT id, name, description, price, stock, category, image_url, sizes, material, care, created_at
+		`SELECT id, name, description, price, stock, category, image_url, sizes, material, care, created_at, deleted_at
 		 FROM products WHERE id=$1`, productID))
 	if err != nil {
 		return nil

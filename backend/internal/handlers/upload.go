@@ -14,11 +14,11 @@ import (
 )
 
 type UploadHandler struct {
-	frontendPath string
+	imagesDir string
 }
 
 func NewUploadHandler(cfg *config.Config) *UploadHandler {
-	return &UploadHandler{frontendPath: cfg.Frontend}
+	return &UploadHandler{imagesDir: cfg.ImagesDir}
 }
 
 var allowedExtensions = map[string]bool{
@@ -59,7 +59,7 @@ func (h *UploadHandler) UploadImage(w http.ResponseWriter, r *http.Request) {
 
 	filename := generateFilename(ext)
 
-	destDir := filepath.Join(h.frontendPath, "assets", "img")
+	destDir := h.imagesDir
 	if err := os.MkdirAll(destDir, 0755); err != nil {
 		middleware.WriteJSON(w, http.StatusInternalServerError, middleware.APIError{Error: "error al crear directorio"})
 		return
@@ -80,7 +80,7 @@ func (h *UploadHandler) UploadImage(w http.ResponseWriter, r *http.Request) {
 
 	middleware.WriteJSON(w, http.StatusOK, map[string]string{
 		"filename": filename,
-		"url":      "/assets/img/" + filename,
+		"url":      "/images/" + filename,
 	})
 }
 

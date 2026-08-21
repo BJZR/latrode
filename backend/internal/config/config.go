@@ -47,6 +47,7 @@ type Config struct {
 	DBPass             string
 	DBName             string
 	Frontend           string
+	ImagesDir          string
 	SecretKey          string
 	AllowedOrigin      string
 	GoogleClientID     string
@@ -76,6 +77,7 @@ func Load() *Config {
 		DBPass:             getEnv("DB_PASS", ""),
 		DBName:             getEnv("DB_NAME", "latrode"),
 		Frontend:           getEnv("FRONTEND_PATH", "../frontend"),
+		ImagesDir:          getEnv("IMAGES_DIR", "../latrode_images"),
 		SecretKey:          getEnv("SECRET_KEY", ""),
 		AllowedOrigin:      getEnv("ALLOWED_ORIGIN", ""),
 		GoogleClientID:     getEnv("GOOGLE_CLIENT_ID", ""),

@@ -21,7 +21,7 @@ func NewUserRepo(db *database.DB) *UserRepo {
 func scanUser(s scannable) (*models.User, error) {
 	u := &models.User{}
 	err := s.Scan(&u.ID, &u.Username, &u.Email, &u.PasswordHash, &u.Role,
-		&u.GoogleID, &u.Phone, &u.Address, &u.City, &u.PostalCode, &u.Country,
+		&u.GoogleID, &u.AvatarURL, &u.Phone, &u.Address, &u.City, &u.PostalCode, &u.Country,
 		&u.DocumentType, &u.DocumentNumber, &u.CreatedAt, &u.DeletedAt)
 	if err != nil {
 		return nil, err
@@ -30,7 +30,7 @@ func scanUser(s scannable) (*models.User, error) {
 	return u, nil
 }
 
-const userCols = `id, username, email, password_hash, role, COALESCE(google_id,''), phone, address, city, postal_code, country, document_type, document_number, created_at, deleted_at`
+const userCols = `id, username, email, password_hash, role, COALESCE(google_id,''), COALESCE(avatar_url,''), phone, address, city, postal_code, country, document_type, document_number, created_at, deleted_at`
 
 func (r *UserRepo) Create(username, email, passwordHash string) (*models.User, error) {
 	return scanUser(r.db.DB.QueryRow(
@@ -40,11 +40,11 @@ func (r *UserRepo) Create(username, email, passwordHash string) (*models.User, e
 	))
 }
 
-func (r *UserRepo) CreateFromGoogle(username, email, googleID string) (*models.User, error) {
+func (r *UserRepo) CreateFromGoogle(username, email, googleID, avatarURL string) (*models.User, error) {
 	return scanUser(r.db.DB.QueryRow(
-		`INSERT INTO users (username, email, password_hash, google_id) VALUES ($1, $2, $3, $4)
+		`INSERT INTO users (username, email, password_hash, google_id, avatar_url) VALUES ($1, $2, $3, $4, $5)
 		 RETURNING `+userCols,
-		username, email, "", googleID,
+		username, email, "", googleID, avatarURL,
 	))
 }
 
@@ -235,6 +235,11 @@ func (r *UserRepo) PermanentDeleteUsers(ids []int) error {
 
 func (r *UserRepo) EmptyTrash() error {
 	_, err := r.db.DB.Exec(`DELETE FROM users WHERE deleted_at IS NOT NULL`)
+	return err
+}
+
+func (r *UserRepo) UpdateAvatarURL(userID int, avatarURL string) error {
+	_, err := r.db.DB.Exec(`UPDATE users SET avatar_url=$1 WHERE id=$2`, avatarURL, userID)
 	return err
 }
 

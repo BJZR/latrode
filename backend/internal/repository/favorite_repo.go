@@ -33,7 +33,7 @@ func (r *FavoriteRepo) FindByUserID(userID int) ([]models.Favorite, error) {
 
 	for i := range favs {
 		p, err := scanProduct(r.db.DB.QueryRow(
-			`SELECT id, name, description, price, stock, category, image_url, sizes, material, care, created_at
+			`SELECT id, name, description, price, stock, category, image_url, sizes, material, care, created_at, deleted_at
 			 FROM products WHERE id=$1`, favs[i].ProductID))
 		if err == nil {
 			favs[i].Product = p
