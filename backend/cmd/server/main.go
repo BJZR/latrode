@@ -254,29 +254,29 @@ func main() {
 }
 
 func migrateImages(frontendPath, imagesDir string) {
-	oldDir := filepath.Join(frontendPath, "assets", "img")
-	if _, err := os.Stat(oldDir); os.IsNotExist(err) {
+	srcDir := filepath.Join(frontendPath, "assets", "img")
+	if _, err := os.Stat(srcDir); os.IsNotExist(err) {
 		return
 	}
 	if err := os.MkdirAll(imagesDir, 0755); err != nil {
 		log.Printf("migrateImages: error creando %s: %v", imagesDir, err)
 		return
 	}
-	entries, err := os.ReadDir(oldDir)
+	entries, err := os.ReadDir(srcDir)
 	if err != nil {
-		log.Printf("migrateImages: error leyendo %s: %v", oldDir, err)
+		log.Printf("migrateImages: error leyendo %s: %v", srcDir, err)
 		return
 	}
-	moved := 0
+	copied := 0
 	for _, e := range entries {
 		if e.IsDir() {
 			continue
 		}
-		src := filepath.Join(oldDir, e.Name())
 		dst := filepath.Join(imagesDir, e.Name())
 		if _, err := os.Stat(dst); err == nil {
 			continue
 		}
+		src := filepath.Join(srcDir, e.Name())
 		in, err := os.Open(src)
 		if err != nil {
 			continue
@@ -293,10 +293,9 @@ func migrateImages(frontendPath, imagesDir string) {
 		}
 		out.Close()
 		in.Close()
-		os.Remove(src)
-		moved++
+		copied++
 	}
-	if moved > 0 {
-		log.Printf("migrateImages: %d imágenes movidas de %s → %s", moved, oldDir, imagesDir)
+	if copied > 0 {
+		log.Printf("migrateImages: %d imágenes copiadas de %s → %s", copied, srcDir, imagesDir)
 	}
 }

@@ -1,6 +1,6 @@
 INSERT INTO payment_methods (name, description, enabled) VALUES
-('Contra Entrega', 'Paga en efectivo cuando recibas tu pedido', true),
-('Nequi', 'Paga por Nequi al número 3022833007', true),
-('Daviplata', 'Paga por Daviplata al número 3022833007', true),
-('Botón Bancolombia', 'Paga por botón de pago de Bancolombia', true)
+('cash_on_delivery', 'Paga en efectivo cuando recibes tu pedido', true),
+('nequi', 'Paga desde la app Nequi', true),
+('daviplata', 'Paga desde la app DaviPlata', true),
+('boton_bancolombia', 'Paga con Botón Bancolombia', true)
 ON CONFLICT DO NOTHING;
