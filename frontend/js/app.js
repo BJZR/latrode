@@ -730,6 +730,7 @@ class App {
     );
     this.updateFavoriteIcon();
     if (this.currentProduct) {
+      this.updateProductMeta(this.currentProduct);
       const urls = [this.currentProduct.imageUrl];
       if (this.currentProduct.colors) {
         this.currentProduct.colors.forEach(c => {
@@ -759,11 +760,51 @@ class App {
     document.body.classList.remove("expanded-mode");
     document.getElementById("product-feed").style.overflow = "scroll";
     this.currentProduct = null;
+    this.resetProductMeta();
     setTimeout(() => {
       document
         .querySelectorAll(".card")
         .forEach((c) => c.classList.remove("collapsing"));
     }, 400);
+  }
+
+  updateProductMeta(product) {
+    const title = `${product.name} - Latrode`;
+    const desc = product.description || `Compra ${product.name} en Latrode. Ropa deportiva de calidad.`;
+    const img = this.imgUrl(product.imageUrl);
+    const url = `https://latrode.shop/#product-${product.id}`;
+    document.title = title;
+    this._setMeta("og:title", title);
+    this._setMeta("og:description", desc);
+    this._setMeta("og:image", img);
+    this._setMeta("og:url", url);
+    this._setMeta("twitter:title", title);
+    this._setMeta("twitter:description", desc);
+    this._setMeta("twitter:image", img);
+    this._setCanonical(url);
+  }
+
+  resetProductMeta() {
+    document.title = "Latrode - Ropa Deportiva";
+    const defaultDesc = "Tienda de ropa deportiva. Bermudas, camisas, suéteres y calzoncillos con diseño único.";
+    this._setMeta("og:title", "Latrode - Ropa Deportiva");
+    this._setMeta("og:description", defaultDesc);
+    this._setMeta("og:image", "https://latrode.shop/images/1.jpg");
+    this._setMeta("og:url", "https://latrode.shop/");
+    this._setMeta("twitter:title", "Latrode - Ropa Deportiva");
+    this._setMeta("twitter:description", defaultDesc);
+    this._setMeta("twitter:image", "https://latrode.shop/images/1.jpg");
+    this._setCanonical("https://latrode.shop/");
+  }
+
+  _setMeta(property, content) {
+    let el = document.querySelector(`meta[property="${property}"], meta[name="${property}"]`);
+    if (el) el.setAttribute("content", content);
+  }
+
+  _setCanonical(href) {
+    let link = document.querySelector("link[rel='canonical']");
+    if (link) link.setAttribute("href", href);
   }
 
   closeSearch() {
@@ -2069,7 +2110,20 @@ class App {
       this.resumePendingPurchase();
     } catch (error) {
       console.error('Login error:', error);
-      this.showNotification(error.message || "Error al iniciar sesión");
+      if (error.message === "email_not_found") {
+        this.showConfirmDialog(
+          "Hola!",
+          "Parece que aún no tienes una cuenta. ¿Te gustaría registrarte para continuar?",
+          () => {
+            this.showRegisterForm();
+          },
+          null,
+          "Registrarme",
+          "Cancelar",
+        );
+      } else {
+        this.showNotification(error.message || "Error al iniciar sesión");
+      }
     }
   }
 
