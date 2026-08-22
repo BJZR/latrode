@@ -65,6 +65,7 @@ func main() {
 	paymentHandler := handlers.NewPaymentHandler(orderRepo, cartRepo, wompiClient, wompiCfg)
 	oauthHandler := handlers.NewOAuthHandler(cfg, userRepo)
 	uploadHandler := handlers.NewUploadHandler(cfg)
+	sitemapHandler := handlers.NewSitemapHandler(productRepo)
 
 	auth := middleware.Auth(userRepo)
 	adminEmail := "latrode.co@gmail.com"
@@ -211,6 +212,8 @@ func main() {
 
 	imagesFs := http.FileServer(http.Dir(cfg.ImagesDir))
 	mux.Handle("/images/", http.StripPrefix("/images/", imagesFs))
+
+	mux.HandleFunc("/sitemap.xml", sitemapHandler.Generate)
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" {

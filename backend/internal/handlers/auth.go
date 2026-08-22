@@ -84,7 +84,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.userRepo.FindByEmail(req.Email)
 	if err != nil {
-		middleware.WriteJSON(w, http.StatusUnauthorized, middleware.APIError{Error: "email o contraseña incorrectos"})
+		middleware.WriteJSON(w, http.StatusNotFound, middleware.APIError{Error: "email_not_found"})
 		return
 	}
 

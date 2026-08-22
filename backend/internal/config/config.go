@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -77,7 +78,7 @@ func Load() *Config {
 		DBPass:             getEnv("DB_PASS", ""),
 		DBName:             getEnv("DB_NAME", "latrode"),
 		Frontend:           getEnv("FRONTEND_PATH", "../frontend"),
-		ImagesDir:          getEnv("IMAGES_DIR", "../imgs"),
+		ImagesDir:          getEnv("IMAGES_DIR", defaultImagesDir()),
 		SecretKey:          getEnv("SECRET_KEY", ""),
 		AllowedOrigin:      getEnv("ALLOWED_ORIGIN", ""),
 		GoogleClientID:     getEnv("GOOGLE_CLIENT_ID", ""),
@@ -108,4 +109,12 @@ func getEnv(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+func defaultImagesDir() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "../imgs"
+	}
+	return filepath.Join(home, "imgs")
 }
