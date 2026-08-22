@@ -89,9 +89,6 @@ El servidor arranca en `http://localhost:8080`.
 ```bash
 # Producción
 ./start.sh
-
-# Sandbox de Wompi (pagos de prueba)
-./start-test.sh
 ```
 
 ---
