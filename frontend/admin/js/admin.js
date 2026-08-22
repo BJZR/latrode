@@ -984,6 +984,7 @@ document.querySelectorAll('.nav-item').forEach(item => {
         document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
         document.getElementById(`section-${section}`)?.classList.add('active');
         document.getElementById('pageTitle').textContent = item.textContent.trim();
+        closeSidebar();
         switch (section) {
             case 'dashboard': loadDashboard(); break;
             case 'orders': loadOrders(); break;
@@ -995,3 +996,21 @@ document.querySelectorAll('.nav-item').forEach(item => {
         }
     });
 });
+
+function openSidebar() {
+    document.querySelector('.sidebar').classList.add('open');
+    document.getElementById('sidebarOverlay').classList.add('active');
+}
+
+function closeSidebar() {
+    document.querySelector('.sidebar').classList.remove('open');
+    document.getElementById('sidebarOverlay')?.classList.remove('active');
+}
+
+document.getElementById('hamburgerBtn')?.addEventListener('click', () => {
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar.classList.contains('open')) closeSidebar();
+    else openSidebar();
+});
+
+document.getElementById('sidebarOverlay')?.addEventListener('click', closeSidebar);
