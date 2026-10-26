@@ -4,6 +4,16 @@
 whatsapp = 573044863455
 nequi = 3000000000
 
+[p1793028538331]
+nombre = BJZR
+categoria = Camisetas
+para = femenino
+precio = 2000
+descripcion = Daya..
+tallas = XS, S, M, L, XL
+colores = Negro:#000000
+foto = p1793028538331-mvpewawt.jpg
+
 [p1]
 nombre = Camiseta Dry Fit
 categoria = Camisetas
